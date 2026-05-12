@@ -1,0 +1,30 @@
+﻿{
+    "mode":  "paper",
+    "cash":  87134000,
+    "realized_pnl":  0,
+    "positions":  [
+                      {
+                          "ticker":  "000660",
+                          "name":  "SK하이닉스",
+                          "quantity":  2,
+                          "avg_price":  1750000,
+                          "opened_at":  "2026-05-12T01:50:00+09:00"
+                      },
+                      {
+                          "ticker":  "005930",
+                          "name":  "삼성전자",
+                          "quantity":  21,
+                          "avg_price":  275000,
+                          "opened_at":  "2026-05-12T01:50:00+09:00"
+                      },
+                      {
+                          "ticker":  "018260",
+                          "name":  "삼성SDS",
+                          "quantity":  21,
+                          "avg_price":  171000,
+                          "opened_at":  "2026-05-12T01:50:00+09:00"
+                      }
+                  ],
+    "last_run":  "2026-05-12T01:50:00+09:00",
+    "executed_events":  []
+}
