@@ -1,0 +1,9 @@
+{
+  "date": "2026-05-12T01:50:00+09:00",
+  "source": "test snapshot from entry_exit_timing_playbook",
+  "prices": {
+    "000660": 1750000,
+    "005930": 275000,
+    "018260": 171000
+  }
+}

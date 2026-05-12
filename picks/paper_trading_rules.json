@@ -1,0 +1,40 @@
+{
+  "mode": "paper",
+  "source": "picks/entry_exit_timing_playbook.md",
+  "cash_currency": "KRW",
+  "positions": [
+    {
+      "ticker": "000660",
+      "name": "SK하이닉스",
+      "status": "active",
+      "entry_low": 1700000,
+      "entry_high": 1780000,
+      "target": 2160000,
+      "stop_loss": 1650000,
+      "max_position_pct": 5,
+      "target_sell_ratio": 0.5
+    },
+    {
+      "ticker": "005930",
+      "name": "삼성전자",
+      "status": "active",
+      "entry_low": 270000,
+      "entry_high": 278000,
+      "target": 330000,
+      "stop_loss": 257000,
+      "max_position_pct": 6,
+      "target_sell_ratio": 0.5
+    },
+    {
+      "ticker": "018260",
+      "name": "삼성SDS",
+      "status": "active",
+      "entry_low": 168000,
+      "entry_high": 174000,
+      "target": 200000,
+      "stop_loss": 160000,
+      "max_position_pct": 4,
+      "target_sell_ratio": 0.5
+    }
+  ]
+}

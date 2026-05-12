@@ -1,0 +1,46 @@
+{
+  "mcpServers": {
+    "playmcp": {
+      "type": "http",
+      "url": "https://playmcp.kakao.com/mcp"
+    }
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "powershell",
+            "command": "$f='picks\\alerts\\pending.json'; if(Test-Path $f){$d=Get-Content $f -Raw|ConvertFrom-Json; $m='⚠️ 이상보고: '+($d.issues-join' | '); Remove-Item $f; Write-Output (ConvertTo-Json @{systemMessage=$m} -Compress)}",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch",
+      "mcp__claude_ai_PlayMCP__opendart-find_company",
+      "mcp__claude_ai_PlayMCP__opendart-get_capital_change",
+      "mcp__claude_ai_PlayMCP__opendart-get_company_info",
+      "mcp__claude_ai_PlayMCP__opendart-get_dividend_info",
+      "mcp__claude_ai_PlayMCP__opendart-get_employees",
+      "mcp__claude_ai_PlayMCP__opendart-get_executive_stock",
+      "mcp__claude_ai_PlayMCP__opendart-get_executives",
+      "mcp__claude_ai_PlayMCP__opendart-get_financial_account",
+      "mcp__claude_ai_PlayMCP__opendart-get_financial_index",
+      "mcp__claude_ai_PlayMCP__opendart-get_full_financial_statement",
+      "mcp__claude_ai_PlayMCP__opendart-get_largest_shareholders",
+      "mcp__claude_ai_PlayMCP__opendart-get_major_stock",
+      "mcp__claude_ai_PlayMCP__opendart-get_treasury_stock",
+      "mcp__claude_ai_PlayMCP__opendart-search_disclosures",
+      "mcp__claude_ai_PlayMCP__UsStockInfo-get_finance_news",
+      "mcp__claude_ai_PlayMCP__UsStockInfo-get_financial_statement",
+      "mcp__claude_ai_PlayMCP__UsStockInfo-get_historical_stock_prices",
+      "mcp__claude_ai_PlayMCP__UsStockInfo-get_stock_info"
+    ]
+  }
+}
