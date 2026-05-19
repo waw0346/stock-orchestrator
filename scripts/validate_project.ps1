@@ -76,7 +76,16 @@ Write-Output ''
 Write-Output '== Agent JSON contract =='
 $agentDir = Join-Path $root '.claude/agents'
 $agentFiles = Get-ChildItem -Path $agentDir -Filter '*.md' | Where-Object {
-  $_.BaseName -notin @('weekly-tracker', 'monthly-tracker', 'flow-momentum-tracker', 'entry-exit-timing-strategist')
+  $_.BaseName -notin @(
+    'weekly-tracker',
+    'monthly-tracker',
+    'flow-momentum-tracker',
+    'entry-exit-timing-strategist',
+    'market-regime-analyst',
+    'portfolio-manager',
+    'position-sizing-analyst',
+    'performance-reviewer'
+  )
 }
 
 foreach ($agent in $agentFiles) {
@@ -98,6 +107,24 @@ foreach ($agent in $agentFiles) {
 Write-Output ''
 Write-Output '== Pick data quality =='
 $pickDir = Join-Path $root 'picks'
+$indexStatusByTicker = @{}
+$indexFile = Join-Path $pickDir 'INDEX.md'
+if (Test-Path $indexFile) {
+  $indexLines = Get-Content -Path $indexFile -Encoding UTF8
+  foreach ($line in $indexLines) {
+    if ($line -match '^\|\s*(20\d{2}-\d{2}-\d{2})\s*\|\s*([0-9]{6})\s*\|') {
+      $columns = $line -split '\|'
+      if ($columns.Count -ge 10) {
+        $tickerFromIndex = $columns[2].Trim()
+        $statusFromIndex = $columns[9].Trim()
+        if (-not [string]::IsNullOrWhiteSpace($tickerFromIndex) -and -not [string]::IsNullOrWhiteSpace($statusFromIndex)) {
+          $indexStatusByTicker[$tickerFromIndex] = $statusFromIndex
+        }
+      }
+    }
+  }
+}
+
 foreach ($pick in Get-ChildItem -Path $pickDir -Filter '20*.md') {
   $fm = Read-FrontMatter -Path $pick.FullName
   $ticker = $fm['ticker']
@@ -108,6 +135,13 @@ foreach ($pick in Get-ChildItem -Path $pickDir -Filter '20*.md') {
 
   $name = $fm['name']
   $status = $fm['status']
+
+  if ($indexStatusByTicker.ContainsKey($ticker) -and $indexStatusByTicker[$ticker] -ne $status) {
+    Add-Issue -Level 'ERROR' -Area 'Pick data quality' -Message ("Pick status mismatch between INDEX and frontmatter: {0} index={1} file={2}" -f $ticker, $indexStatusByTicker[$ticker], $status)
+    Write-Output ("FAIL {0} {1} - status mismatch INDEX={2}, file={3}" -f $ticker, $name, $indexStatusByTicker[$ticker], $status)
+    continue
+  }
+
   $current = 0
   [void][int]::TryParse(($fm['current_price_at_pick'] -as [string]), [ref]$current)
 
@@ -160,6 +194,22 @@ foreach ($relative in @('picks/cache', 'picks/alerts')) {
     Add-Issue -Level 'ERROR' -Area 'Directory checks' -Message ("Missing required directory: {0}" -f $relative)
     Write-Output ("FAIL {0} - missing" -f $relative)
   }
+}
+
+Write-Output ''
+Write-Output '== MCP config =='
+$mcpFile = Join-Path $root '.mcp.json'
+if (Test-Path $mcpFile) {
+  $mcpText = Get-Content -Path $mcpFile -Raw -Encoding UTF8
+  if ($mcpText -match '"playmcp"' -and $mcpText -match 'https://playmcp.kakao.com/mcp') {
+    Write-Output 'OK   .mcp.json playmcp'
+  } else {
+    Add-Issue -Level 'ERROR' -Area 'MCP config' -Message '.mcp.json exists but playmcp configuration is incomplete'
+    Write-Output 'FAIL .mcp.json - playmcp configuration is incomplete'
+  }
+} else {
+  Add-Issue -Level 'ERROR' -Area 'MCP config' -Message 'Missing .mcp.json project MCP configuration'
+  Write-Output 'FAIL .mcp.json - missing'
 }
 
 Write-Output ''
@@ -240,6 +290,79 @@ if (Test-Path $paperRules) {
     if ($paperRulesText -notmatch $ticker) {
       Add-Issue -Level 'ERROR' -Area 'Paper trading' -Message ("Paper trading rules missing ticker: {0}" -f $ticker)
       Write-Output ("FAIL paper rules - missing {0}" -f $ticker)
+    }
+  }
+}
+
+Write-Output ''
+Write-Output '== Capital protection gate =='
+$policyFile = Join-Path $root 'INVESTMENT_POLICY.md'
+$checklistFile = Join-Path $root 'docs/pre_trade_checklist.md'
+$currentStateFile = Join-Path $root 'CURRENT_STATE.md'
+$postmortemDir = Join-Path $root 'picks/postmortems'
+$capitalAgents = @(
+  '.claude/agents/market-regime-analyst.md',
+  '.claude/agents/portfolio-manager.md',
+  '.claude/agents/position-sizing-analyst.md',
+  '.claude/agents/performance-reviewer.md'
+)
+
+foreach ($required in @($policyFile, $checklistFile, $currentStateFile, $postmortemDir)) {
+  if (Test-Path $required) {
+    Write-Output ("OK   {0}" -f (Resolve-Path -Path $required -Relative))
+  } else {
+    Add-Issue -Level 'ERROR' -Area 'Capital protection gate' -Message ("Missing required risk-control file or directory: {0}" -f $required)
+    Write-Output ("FAIL {0} - missing" -f $required)
+  }
+}
+
+foreach ($relative in $capitalAgents) {
+  $path = Join-Path $root $relative
+  if (Test-Path $path) {
+    Write-Output ("OK   {0}" -f (Resolve-Path -Path $path -Relative))
+  } else {
+    Add-Issue -Level 'ERROR' -Area 'Capital protection gate' -Message ("Missing required risk-control agent: {0}" -f $relative)
+    Write-Output ("FAIL {0} - missing" -f $relative)
+  }
+}
+
+if (Test-Path $currentStateFile) {
+  $currentStateText = Get-Content -Path $currentStateFile -Raw -Encoding UTF8
+  foreach ($requiredText in @('Canonical Files', 'Archived Files', 'Pick Status Rules', 'Validation Commands')) {
+    if ($currentStateText -notmatch [regex]::Escape($requiredText)) {
+      Add-Issue -Level 'ERROR' -Area 'Capital protection gate' -Message ("Current state file missing required text: {0}" -f $requiredText)
+      Write-Output ("FAIL current state - missing {0}" -f $requiredText)
+    }
+  }
+}
+
+if (Test-Path $policyFile) {
+  $policyText = Get-Content -Path $policyFile -Raw -Encoding UTF8
+  foreach ($requiredText in @('risk_single_position_max', 'risk_stop_loss_budget', 'risk_sector_exposure_max', 'new_pick_approval_gate')) {
+    if ($policyText -notmatch [regex]::Escape($requiredText)) {
+      Add-Issue -Level 'ERROR' -Area 'Capital protection gate' -Message ("Investment policy missing required text: {0}" -f $requiredText)
+      Write-Output ("FAIL investment policy - missing {0}" -f $requiredText)
+    }
+  }
+}
+
+if (Test-Path $checklistFile) {
+  $checklistText = Get-Content -Path $checklistFile -Raw -Encoding UTF8
+  foreach ($requiredText in @('Hard Block', 'Quality Gate', 'Position Gate', 'Pre-Trade Gate')) {
+    if ($checklistText -notmatch [regex]::Escape($requiredText)) {
+      Add-Issue -Level 'ERROR' -Area 'Capital protection gate' -Message ("Pre-trade checklist missing required text: {0}" -f $requiredText)
+      Write-Output ("FAIL pre-trade checklist - missing {0}" -f $requiredText)
+    }
+  }
+}
+
+foreach ($relative in $capitalAgents) {
+  $path = Join-Path $root $relative
+  if (Test-Path $path) {
+    $agentText = Get-Content -Path $path -Raw -Encoding UTF8
+    if ($agentText -notmatch '```json') {
+      Add-Issue -Level 'ERROR' -Area 'Capital protection gate' -Message ("Risk-control agent missing JSON contract: {0}" -f $relative)
+      Write-Output ("FAIL {0} - missing JSON contract" -f $relative)
     }
   }
 }
