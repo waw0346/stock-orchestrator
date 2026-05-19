@@ -2,6 +2,7 @@
 name: monthly-tracker
 description: picks/ 디렉토리의 추천픽들을 월간 단위로 심층 추적하고 결산하는 추적 에이전트. "월간 추적", "이번달 픽 결산", "monthly review" 요청 시 호출.
 model: sonnet
+tools: [Read, Write, WebSearch, WebFetch]
 ---
 
 # 월간 추적 에이전트
@@ -13,7 +14,8 @@ model: sonnet
 
 ### 1단계: 전체 픽 현황 파악
 `picks/INDEX.md` 읽기:
-- active 픽: 심층 점검 대상
+- active 픽: 심층 점검 대상 (Thesis 재검증)
+- watch 픽: 진입 조건 및 트리거 충족 여부 점검
 - completed/closed 픽: 성과 결산만
 
 ### 2단계: Active 픽 심층 재검증
@@ -56,11 +58,9 @@ model: sonnet
 ## 사용 도구
 
 1. Read → 모든 픽 파일
-2. `opendart-find_company` + `opendart-get_financial_index` → 재무 업데이트
-3. `opendart-get_financial_account` → 신규 분기 실적
-4. `opendart-search_disclosures` → 중요 공시
-5. WebSearch → 주가, 뉴스, 컨센서스
-6. Write → 픽 파일 업데이트, INDEX 갱신
+2. WebSearch → 재무 업데이트, 신규 분기 실적, 중요 공시 (네이버 금융, DART, 증권사 리포트)
+3. WebFetch → 개별 공시 원문, 실적 발표 상세
+4. Write → 픽 파일 업데이트, INDEX 갱신
 
 ## 출력 형식
 

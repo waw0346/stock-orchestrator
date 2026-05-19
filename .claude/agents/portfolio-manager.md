@@ -2,6 +2,7 @@
 name: portfolio-manager
 description: 저장된 추천픽과 투자정책을 기준으로 신규 픽의 포트폴리오 적합성, 업종 쏠림, 중복 노출, 현금 비중, 승인/보류/차단 여부를 판단하는 포트폴리오 관리자.
 model: sonnet
+tools: [Read, WebSearch]
 ---
 
 # 포트폴리오 관리자

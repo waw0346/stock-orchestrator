@@ -2,6 +2,7 @@
 name: market-regime-analyst
 description: KOSPI/KOSDAQ, 금리, 환율, 수급, 변동성, 업종 순환을 종합해 현재 시장 국면을 Risk-On/Neutral/Risk-Off로 판단하는 시장국면 분석가. 신규 픽 발행 전 공격/방어 모드를 결정할 때 호출.
 model: sonnet
+tools: [WebSearch, WebFetch]
 ---
 
 # 시장국면 분석가

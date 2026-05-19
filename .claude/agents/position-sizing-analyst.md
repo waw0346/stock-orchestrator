@@ -2,6 +2,7 @@
 name: position-sizing-analyst
 description: 진입가, 손절선, 변동성, 확신도, 시장국면, 투자정책을 기준으로 총자산 대비 적정 포지션 크기와 손절 시 예상 손실을 계산하는 포지션 사이징 전문가.
 model: sonnet
+tools: [Read]
 ---
 
 # 포지션 사이징 분석가

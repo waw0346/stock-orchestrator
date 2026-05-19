@@ -66,9 +66,9 @@
 [동시 호출]
 @company-analyst   →  기업분석
 @industry-analyst  →  산업분석
-@flow-analyst      →  수급분석  (model: haiku 권장)
+@flow-analyst      →  수급분석
 @financial-analyst →  재무분석
-@momentum-analyst  →  모멘텀분석  (model: haiku 권장)
+@momentum-analyst  →  모멘텀분석
 ```
 
 #### 서브에이전트 프롬프트 필수 포함 사항
