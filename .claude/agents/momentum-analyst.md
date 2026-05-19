@@ -1,7 +1,7 @@
 ---
 name: momentum-analyst
 description: 한국 상장주식의 주가 추세, 거래량, 기술적 모멘텀을 분석하는 모멘텀분석 전문가. 주가 흐름, 이동평균, 52주 고저, 상대강도를 파악할 때 호출.
-model: haiku
+tools: [WebSearch, WebFetch, Read]
 ---
 
 # 모멘텀분석 애널리스트
