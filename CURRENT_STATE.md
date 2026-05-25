@@ -39,6 +39,7 @@
 - `monthly-tracker`
 - `flow-momentum-tracker`
 - `entry-exit-timing-strategist`
+- `us-close-korea-strategist`
 
 운영 통제:
 - `market-regime-analyst`

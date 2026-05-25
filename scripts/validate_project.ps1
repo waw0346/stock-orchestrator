@@ -93,6 +93,7 @@ $agentFiles = Get-ChildItem -Path $agentDir -Filter '*.md' | Where-Object {
     'monthly-tracker',
     'flow-momentum-tracker',
     'entry-exit-timing-strategist',
+    'us-close-korea-strategist',
     'market-regime-analyst',
     'portfolio-manager',
     'position-sizing-analyst',
@@ -303,6 +304,40 @@ if (Test-Path $timingPlaybook) {
     if ($timingText -notmatch [regex]::Escape($requiredText)) {
       Add-Issue -Level 'ERROR' -Area 'Entry/Exit timing' -Message ("Timing playbook missing required text: {0}" -f $requiredText)
       Write-Output ("FAIL timing playbook - missing {0}" -f $requiredText)
+    }
+  }
+}
+
+Write-Output ''
+Write-Output '== US close Korea preopen strategy =='
+$usCloseAgent = Join-Path $root '.claude/agents/us-close-korea-strategist.md'
+$watchlistFile = Join-Path $root 'picks/WATCHLIST.md'
+
+foreach ($required in @($usCloseAgent, $watchlistFile)) {
+  if (Test-Path $required) {
+    Write-Output ("OK   {0}" -f (Resolve-Path -Path $required -Relative))
+  } else {
+    Add-Issue -Level 'ERROR' -Area 'US close Korea preopen strategy' -Message ("Missing required preopen strategy file: {0}" -f $required)
+    Write-Output ("FAIL {0} - missing" -f $required)
+  }
+}
+
+if (Test-Path $usCloseAgent) {
+  $usCloseText = Get-Content -Path $usCloseAgent -Raw -Encoding UTF8
+  foreach ($requiredText in @('name: us-close-korea-strategist', 'WATCHLIST.md', 'Hard Block', 'preopen_candidates', 'us-close-korea-strategist')) {
+    if ($usCloseText -notmatch [regex]::Escape($requiredText)) {
+      Add-Issue -Level 'ERROR' -Area 'US close Korea preopen strategy' -Message ("Preopen strategy agent missing required text: {0}" -f $requiredText)
+      Write-Output ("FAIL preopen agent - missing {0}" -f $requiredText)
+    }
+  }
+}
+
+if (Test-Path $watchlistFile) {
+  $watchlistText = Get-Content -Path $watchlistFile -Raw -Encoding UTF8
+  foreach ($requiredText in @('WATCHLIST', 'BLOCK', '2026-')) {
+    if ($watchlistText -notmatch [regex]::Escape($requiredText)) {
+      Add-Issue -Level 'ERROR' -Area 'US close Korea preopen strategy' -Message ("WATCHLIST missing required text: {0}" -f $requiredText)
+      Write-Output ("FAIL WATCHLIST - missing {0}" -f $requiredText)
     }
   }
 }
