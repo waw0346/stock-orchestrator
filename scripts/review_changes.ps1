@@ -85,6 +85,9 @@ $archivedDocPatterns = @(
 $operatingDataPatterns = @(
   '^picks/20.*\.md$',
   '^picks/INDEX\.md$',
+  '^picks/WATCHLIST\.md$',
+  '^picks/dashboard\.html$',
+  '^picks/tracking_.*\.md$',
   '^picks/entry_exit_timing_playbook.*\.md$',
   '^picks/postmortems/.*'
 )

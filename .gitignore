@@ -14,3 +14,4 @@ picks/alerts/*.json
 picks/*.test.json
 picks/*.test.csv
 picks/paper_price_snapshot.target.test.json
+                                                            
