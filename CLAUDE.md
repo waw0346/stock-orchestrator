@@ -31,11 +31,13 @@
 | "월간 추적" / "월간 결산" | monthly-tracker 위임 | tracker |
 | "수급·모멘텀 추적" / "PICK 주간 누적 보고서" | flow-momentum-tracker 위임 | tracker |
 | "매수 타이밍" / "매도 타이밍" / "진입 청산 전략" / "entry exit timing" | entry-exit-timing-strategist 위임 | timing |
+| "풀백" / "눌림" / "pullback" / "눌림 진입" / "되돌림 진입" / "눌림 매수 조건" | pullback-analyst 위임 | timing |
 | "포트폴리오 점검" / "비중 괜찮아?" / "노출 점검" | portfolio-manager 위임 | risk control |
 | "몇 % 사야 해?" / "포지션 크기" / "손실 얼마나?" | position-sizing-analyst 위임 | risk control |
 | "시장 국면" / "공격 모드?" / "방어 모드?" | market-regime-analyst 위임 | regime |
 | "성과 복기" / "이번달 돈 벌었어?" / "전략 평가" | performance-reviewer 위임 | review |
 | "미국장 마감" / "미장 영향" / "한국장 장전 전략" / "익일 한국 관련주" | us-close-korea-strategist 위임 | preopen |
+| "장전 외국인" / "외국인 순매수 확인" / "장전 픽업" / "8시30분 수급" / "preopen foreign" | preopen-foreign-scanner 위임 | preopen |
 | "현재 픽 목록" | picks/INDEX.md 읽어서 표 출력 | 없음 |
 | "오늘 시세 ○○" | WebSearch 직접 (에이전트 불필요) | 없음 |
 
@@ -298,6 +300,13 @@ review_history: []
 → 결과는 `picks/WATCHLIST.md` 업데이트 후보로 사용
 → 신규 추천픽 저장은 별도 Capital Protection Gate 통과 후에만 허용
 → 장전 후보는 최대 3개만 제시하고, 갭상승 +5% 이상 추격은 기본 BLOCK
+
+### 장전 외국인 순매수 스캔 (8:30~9:00 KST)
+사용자: "장전 외국인", "외국인 순매수 확인", "장전 픽업", "8시30분 수급", "preopen foreign"
+→ `@preopen-foreign-scanner`에게 위임
+→ 기준 파일: `picks/WATCHLIST.md` (us-close-korea-strategist가 전날 작성한 후보 목록)
+→ 외국인 순매수 확인 → 갭 체크 → 손익비 확인 3단계 필터 적용
+→ 최대 3종목 빠른 출력, 갭 +5% 이상 추격 BLOCK 동일 적용
 
 ---
 
