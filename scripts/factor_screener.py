@@ -12,6 +12,7 @@
 import sys
 import os
 import warnings
+import argparse
 from datetime import datetime, timedelta
 from typing import Optional, Tuple
 
@@ -96,6 +97,91 @@ def trading_date(dt: datetime) -> str:
     while dt.weekday() >= 5:
         dt -= timedelta(days=1)
     return dt.strftime("%Y%m%d")
+
+
+def date_window(today: datetime) -> Tuple[str, str, str, str]:
+    """Return KRX date strings for end, 3-month, 1-month, and 20-day windows."""
+    end = trading_date(today)
+    start_3m = trading_date(today - timedelta(days=95))
+    start_1m = trading_date(today - timedelta(days=35))
+    start_20d = trading_date(today - timedelta(days=35))
+    return end, start_3m, start_1m, start_20d
+
+
+def print_probe(name: str, ok: bool, detail: str) -> bool:
+    """Print a diagnostic probe result and return its status."""
+    status = "OK" if ok else "FAIL"
+    print(f"{status:<4} {name}: {detail}")
+    return ok
+
+
+def print_info(name: str, detail: str) -> None:
+    """Print diagnostic context that does not affect pass/fail status."""
+    print(f"INFO {name}: {detail}")
+
+
+def diagnose_index(start: str, end: str) -> bool:
+    """Check whether KOSPI benchmark data can be fetched."""
+    try:
+        df = krx.get_index_ohlcv_by_date(start, end, "1001")
+        if df.empty:
+            return print_probe("KOSPI index", False, "empty response")
+        return print_probe(
+            "KOSPI index",
+            True,
+            f"rows={len(df)}, columns={','.join(str(c) for c in df.columns)}",
+        )
+    except Exception as exc:
+        return print_probe("KOSPI index", False, repr(exc))
+
+
+def diagnose_ohlcv(ticker: str, start: str, end: str) -> bool:
+    """Check whether ticker OHLCV data can be fetched."""
+    try:
+        df = krx.get_market_ohlcv_by_date(start, end, ticker)
+        if df.empty:
+            return print_probe("Ticker OHLCV", False, f"{ticker}: empty response")
+        return print_probe(
+            "Ticker OHLCV",
+            True,
+            f"{ticker}: rows={len(df)}, columns={','.join(str(c) for c in df.columns)}",
+        )
+    except Exception as exc:
+        return print_probe("Ticker OHLCV", False, f"{ticker}: {exc!r}")
+
+
+def diagnose_foreign(ticker: str, start: str, end: str) -> bool:
+    """Check whether ticker foreign flow data can be fetched."""
+    try:
+        df = krx.get_market_trading_volume_by_date(start, end, ticker)
+        if df.empty:
+            return print_probe("Foreign flow", False, f"{ticker}: empty response")
+        col = next((c for c in ["외국인합계", "외국인"] if c in df.columns), None)
+        detail = f"{ticker}: rows={len(df)}, columns={','.join(str(c) for c in df.columns)}"
+        if not col:
+            return print_probe("Foreign flow", False, f"{detail}; missing foreign column")
+        return print_probe("Foreign flow", True, f"{detail}; using={col}")
+    except Exception as exc:
+        return print_probe("Foreign flow", False, f"{ticker}: {exc!r}")
+
+
+def run_diagnostics(ticker: str, today: datetime) -> int:
+    """Run data-source diagnostics without writing screener output."""
+    end, start_3m, start_1m, start_20d = date_window(today)
+    print(f"\n{'═'*64}")
+    print(f"  모멘텀 팩터 스크리너 진단  |  {today.strftime('%Y-%m-%d')}")
+    print(f"{'═'*64}\n")
+    print(f"date window: end={end}, 3m={start_3m}, 1m={start_1m}, 20d={start_20d}")
+    print(f"sample ticker: {ticker}\n")
+    print_info("KRX_ID env", "set" if os.environ.get("KRX_ID") else "missing")
+    print_info("KRX_PW env", "set" if os.environ.get("KRX_PW") else "missing")
+
+    checks = [
+        diagnose_index(start_1m, end),
+        diagnose_ohlcv(ticker, start_3m, end),
+        diagnose_foreign(ticker, start_20d, end),
+    ]
+    return 0 if all(checks) else 2
 
 
 def kospi_return(start: str, end: str) -> Optional[float]:
@@ -283,15 +369,32 @@ def write_report(section: str) -> None:
         f.write(header_md + section + "---\n\n" + existing_body)
 
 
+def parse_args() -> argparse.Namespace:
+    """Parse command-line options."""
+    parser = argparse.ArgumentParser(description="KOSPI momentum factor screener")
+    parser.add_argument(
+        "--diagnose",
+        action="store_true",
+        help="check KRX/KOSPI/OHLCV/foreign-flow data sources without writing output",
+    )
+    parser.add_argument(
+        "--diagnose-ticker",
+        default="005380",
+        help="sample ticker for --diagnose, default: 005380",
+    )
+    return parser.parse_args()
+
+
 # ── 메인 ───────────────────────────────────────────────────────────────────
 
 def main():
     """Run the screener and write the Markdown report."""
+    args = parse_args()
     today = datetime.now()
-    end = trading_date(today)
-    start_3m = trading_date(today - timedelta(days=95))
-    start_1m = trading_date(today - timedelta(days=35))
-    start_20d = trading_date(today - timedelta(days=35))
+    if args.diagnose:
+        sys.exit(run_diagnostics(args.diagnose_ticker, today))
+
+    end, start_3m, start_1m, start_20d = date_window(today)
 
     print(f"\n{'═'*64}")
     print(f"  모멘텀 팩터 스크리너  |  {today.strftime('%Y-%m-%d')}")
