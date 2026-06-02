@@ -1,26 +1,29 @@
 #!/usr/bin/env python3
+# pylint: disable=broad-exception-caught,f-string-without-interpolation,line-too-long
+# pylint: disable=too-many-arguments
+# pylint: disable=too-many-locals,too-many-statements
 """
 모멘텀 팩터 스크리너 — KOSPI 주요 종목 대상
 사용법: python scripts/factor_screener.py
 출력:  picks/factor_scores.md (최신이 상단에 누적)
 
-의존성: pip install pykrx pandas numpy
+의존성: pip install pykrx pandas
 """
 
 import sys
 import os
 import warnings
 from datetime import datetime, timedelta
+from typing import Optional
 
 warnings.filterwarnings("ignore")
 
 try:
     from pykrx import stock as krx
     import pandas as pd
-    import numpy as np
 except ImportError:
     print("필수 패키지 없음. 설치 후 재실행:")
-    print("  pip install pykrx pandas numpy")
+    print("  pip install pykrx pandas")
     sys.exit(1)
 
 
@@ -86,6 +89,7 @@ def trading_date(dt: datetime) -> str:
 
 
 def kospi_return(start: str, end: str) -> float:
+    """Return KOSPI percentage return between two KRX date strings."""
     try:
         df = krx.get_index_ohlcv_by_date(start, end, "1001")
         if df.empty or len(df) < 2:
@@ -96,7 +100,8 @@ def kospi_return(start: str, end: str) -> float:
 
 
 def calc_factors(ticker: str, name: str, kp_3m: float, kp_1m: float,
-                 end: str, start_3m: str, start_20d: str) -> dict | None:
+                 end: str, start_3m: str, start_20d: str) -> Optional[dict]:
+    """Calculate momentum, volume, and foreign-flow factors for one ticker."""
     try:
         df = krx.get_market_ohlcv_by_date(start_3m, end, ticker)
         if df.empty or len(df) < 20:
@@ -143,6 +148,7 @@ def calc_factors(ticker: str, name: str, kp_3m: float, kp_1m: float,
 
 
 def normalize(series: pd.Series) -> pd.Series:
+    """Scale a numeric series to a 0-100 range."""
     mn, mx = series.min(), series.max()
     if mx == mn:
         return pd.Series(50.0, index=series.index)
@@ -152,6 +158,7 @@ def normalize(series: pd.Series) -> pd.Series:
 # ── 메인 ───────────────────────────────────────────────────────────────────
 
 def main():
+    """Run the screener and write the Markdown report."""
     today    = datetime.now()
     end      = trading_date(today)
     start_3m = trading_date(today - timedelta(days=95))
