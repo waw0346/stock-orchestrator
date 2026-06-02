@@ -157,12 +157,26 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\review_changes.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File tests\run_all_tests.ps1
 ```
 
+GitHub Actions에서도 동일한 전체 검증 루틴을 실행합니다:
+
+- `Pylint`: Python 3.8/3.9/3.10에서 `scripts/*.py` 정적 분석
+- `Project validation`: Windows PowerShell에서 `tests\run_all_tests.ps1` 실행
+
 개별 테스트만 확인하려면:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File tests\run_validation_tests.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File tests\run_change_review_tests.ps1
 ```
+
+모멘텀 팩터 스크리너를 수동으로 실행하려면:
+
+```powershell
+python -m pip install pykrx pandas
+python scripts\factor_screener.py
+```
+
+스크리너는 KOSPI 기준 수익률을 조회하지 못하면 `picks\factor_scores.md` 저장을 중단합니다. 기준지수 데이터가 0으로 대체된 결과를 운영 산출물로 남기지 않기 위한 방어 장치입니다.
 
 ## 🚀 사용법
 
