@@ -21,6 +21,7 @@ foreach ($expected in @(
   'Agent JSON contract',
   'Pick data quality',
   'MCP config',
+  'US close Korea preopen strategy',
   'Capital protection gate',
   'Summary'
 )) {
@@ -38,7 +39,8 @@ foreach ($expectedSource in @(
   'market-regime-analyst.md',
   'portfolio-manager.md',
   'position-sizing-analyst.md',
-  'performance-reviewer.md'
+  'performance-reviewer.md',
+  'us-close-korea-strategist.md'
 )) {
   $validatorText = Get-Content -Path $validator -Raw -Encoding UTF8
   if ($validatorText -notmatch [regex]::Escape($expectedSource)) {

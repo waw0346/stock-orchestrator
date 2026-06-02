@@ -77,7 +77,7 @@ $criticalPatterns = @(
   '^scripts/(validate_project|review_changes)\.ps1$',
   '^tests/.*\.ps1$',
   '^tests/run_all_tests\.ps1$',
-  '^\.claude/agents/(market-regime-analyst|portfolio-manager|position-sizing-analyst|performance-reviewer)\.md$'
+  '^\.claude/agents/(market-regime-analyst|portfolio-manager|position-sizing-analyst|performance-reviewer|us-close-korea-strategist)\.md$'
 )
 $archivedDocPatterns = @(
   '^(README_v2|CLAUDE_v2|00_setup_guide|01_project_instructions)\.md$'
@@ -85,6 +85,9 @@ $archivedDocPatterns = @(
 $operatingDataPatterns = @(
   '^picks/20.*\.md$',
   '^picks/INDEX\.md$',
+  '^picks/WATCHLIST\.md$',
+  '^picks/dashboard\.html$',
+  '^picks/tracking_.*\.md$',
   '^picks/entry_exit_timing_playbook.*\.md$',
   '^picks/postmortems/.*'
 )

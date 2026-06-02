@@ -64,6 +64,18 @@ function Test-MarketSession {
   return 'KRX regular session open'
 }
 
+function Normalize-PickStatus {
+  param([string]$Status)
+
+  if ([string]::IsNullOrWhiteSpace($Status)) {
+    return ''
+  }
+  if ($Status -match '^(active|watch|closed|completed)') {
+    return $matches[1]
+  }
+  return $Status.Trim()
+}
+
 Write-Output '== Local time =='
 $now = Get-Date
 Write-Output ($now.ToString('yyyy-MM-dd HH:mm:ss K'))
@@ -81,6 +93,7 @@ $agentFiles = Get-ChildItem -Path $agentDir -Filter '*.md' | Where-Object {
     'monthly-tracker',
     'flow-momentum-tracker',
     'entry-exit-timing-strategist',
+    'us-close-korea-strategist',
     'market-regime-analyst',
     'portfolio-manager',
     'position-sizing-analyst',
@@ -111,12 +124,39 @@ $indexStatusByTicker = @{}
 $indexFile = Join-Path $pickDir 'INDEX.md'
 if (Test-Path $indexFile) {
   $indexLines = Get-Content -Path $indexFile -Encoding UTF8
+  $section = ''
   foreach ($line in $indexLines) {
+    if ($line -match '^##\s+Tracked') {
+      $section = 'tracked'
+      continue
+    }
+    if ($line -match '^##\s+Completed') {
+      $section = 'completed'
+      continue
+    }
+    if ($line -match '^##\s+Closed') {
+      $section = 'closed'
+      continue
+    }
+    if ($line -match '^##\s+') {
+      $section = ''
+      continue
+    }
+
     if ($line -match '^\|\s*(20\d{2}-\d{2}-\d{2})\s*\|\s*([0-9]{6})\s*\|') {
       $columns = $line -split '\|'
-      if ($columns.Count -ge 10) {
+      if ($columns.Count -ge 3) {
         $tickerFromIndex = $columns[2].Trim()
-        $statusFromIndex = $columns[9].Trim()
+        $statusFromIndex = ''
+
+        if ($section -eq 'tracked' -and $columns.Count -ge 10) {
+          $statusFromIndex = Normalize-PickStatus $columns[9].Trim()
+        } elseif ($section -eq 'completed') {
+          $statusFromIndex = 'completed'
+        } elseif ($section -eq 'closed') {
+          $statusFromIndex = 'closed'
+        }
+
         if (-not [string]::IsNullOrWhiteSpace($tickerFromIndex) -and -not [string]::IsNullOrWhiteSpace($statusFromIndex)) {
           $indexStatusByTicker[$tickerFromIndex] = $statusFromIndex
         }
@@ -134,7 +174,7 @@ foreach ($pick in Get-ChildItem -Path $pickDir -Filter '20*.md') {
   }
 
   $name = $fm['name']
-  $status = $fm['status']
+  $status = Normalize-PickStatus $fm['status']
 
   if ($indexStatusByTicker.ContainsKey($ticker) -and $indexStatusByTicker[$ticker] -ne $status) {
     Add-Issue -Level 'ERROR' -Area 'Pick data quality' -Message ("Pick status mismatch between INDEX and frontmatter: {0} index={1} file={2}" -f $ticker, $indexStatusByTicker[$ticker], $status)
@@ -264,6 +304,40 @@ if (Test-Path $timingPlaybook) {
     if ($timingText -notmatch [regex]::Escape($requiredText)) {
       Add-Issue -Level 'ERROR' -Area 'Entry/Exit timing' -Message ("Timing playbook missing required text: {0}" -f $requiredText)
       Write-Output ("FAIL timing playbook - missing {0}" -f $requiredText)
+    }
+  }
+}
+
+Write-Output ''
+Write-Output '== US close Korea preopen strategy =='
+$usCloseAgent = Join-Path $root '.claude/agents/us-close-korea-strategist.md'
+$watchlistFile = Join-Path $root 'picks/WATCHLIST.md'
+
+foreach ($required in @($usCloseAgent, $watchlistFile)) {
+  if (Test-Path $required) {
+    Write-Output ("OK   {0}" -f (Resolve-Path -Path $required -Relative))
+  } else {
+    Add-Issue -Level 'ERROR' -Area 'US close Korea preopen strategy' -Message ("Missing required preopen strategy file: {0}" -f $required)
+    Write-Output ("FAIL {0} - missing" -f $required)
+  }
+}
+
+if (Test-Path $usCloseAgent) {
+  $usCloseText = Get-Content -Path $usCloseAgent -Raw -Encoding UTF8
+  foreach ($requiredText in @('name: us-close-korea-strategist', 'WATCHLIST.md', 'Hard Block', 'preopen_candidates', 'us-close-korea-strategist')) {
+    if ($usCloseText -notmatch [regex]::Escape($requiredText)) {
+      Add-Issue -Level 'ERROR' -Area 'US close Korea preopen strategy' -Message ("Preopen strategy agent missing required text: {0}" -f $requiredText)
+      Write-Output ("FAIL preopen agent - missing {0}" -f $requiredText)
+    }
+  }
+}
+
+if (Test-Path $watchlistFile) {
+  $watchlistText = Get-Content -Path $watchlistFile -Raw -Encoding UTF8
+  foreach ($requiredText in @('WATCHLIST', 'BLOCK', '2026-')) {
+    if ($watchlistText -notmatch [regex]::Escape($requiredText)) {
+      Add-Issue -Level 'ERROR' -Area 'US close Korea preopen strategy' -Message ("WATCHLIST missing required text: {0}" -f $requiredText)
+      Write-Output ("FAIL WATCHLIST - missing {0}" -f $requiredText)
     }
   }
 }

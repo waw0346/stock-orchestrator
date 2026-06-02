@@ -34,6 +34,7 @@ Anthropic의 [subagent 패턴](https://docs.claude.com/en/docs/claude-code/sub-a
 │  weekly/monthly-tracker (추천픽 추적)       │
 │  flow-momentum-tracker (수급·모멘텀 추적)  │
 │  entry-exit-timing-strategist (타이밍 전략)│
+│  us-close-korea-strategist (미국장→한국장) │
 │  market-regime-analyst (시장 국면)          │
 │  portfolio-manager (포트폴리오 적합성)      │
 │  position-sizing-analyst (포지션 크기)      │
@@ -68,6 +69,7 @@ stock orchestrator/
 │       ├── monthly-tracker.md
 │       ├── flow-momentum-tracker.md
 │       ├── entry-exit-timing-strategist.md
+│       ├── us-close-korea-strategist.md
 │       ├── market-regime-analyst.md
 │       ├── portfolio-manager.md
 │       ├── position-sizing-analyst.md
@@ -241,6 +243,16 @@ LG에너지솔루션과 삼성SDI 비교 분석해줘. 재무·리스크·포지
 `picks/entry_exit_timing_playbook.md`에 `entry_zone`, `avoid_zone`, `stop_loss`, `exit_plan`,
 `Kelly-style sizing`을 조건부 시나리오로 정리합니다.
 직접 매매 지시가 아니라 리서치 기반 의사결정 프레임입니다.
+
+### 미국장 마감 후 한국장 전략
+
+```
+미국장 마감 후 익일 한국 관련주 픽업해줘
+```
+
+`@us-close-korea-strategist`가 미국 지수, 섹터 ETF, 주도주, 금리, 달러, 원자재 신호를 한국 관련 섹터와 종목으로 매핑합니다.
+결과는 장전 집중 후보, 관찰 후보, BLOCK 후보로 나누며 `picks/WATCHLIST.md` 업데이트안으로 사용합니다.
+신규 추천픽 저장은 별도 `Capital Protection Gate` 통과 후에만 허용됩니다.
 
 ### 포트폴리오 통제
 

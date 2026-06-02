@@ -37,6 +37,14 @@ Assert-FileContains '.claude/agents/entry-exit-timing-strategist.md' @(
   'exit_plan'
 )
 
+Assert-FileContains '.claude/agents/us-close-korea-strategist.md' @(
+  'name: us-close-korea-strategist',
+  'us-close-korea-strategist',
+  'WATCHLIST.md',
+  'preopen_candidates',
+  'Hard Block'
+)
+
 Assert-FileContains 'picks/entry_exit_timing_playbook.md' @(
   'entry-exit-timing-strategist',
   '000660',
@@ -49,19 +57,22 @@ Assert-FileContains 'CLAUDE.md' @(
   'flow momentum weekly',
   '@flow-momentum-tracker',
   'entry exit timing',
-  '@entry-exit-timing-strategist'
+  '@entry-exit-timing-strategist',
+  '@us-close-korea-strategist'
 )
 
 Assert-FileContains 'README.md' @(
   'flow-momentum-tracker',
   'tracking_weekly_cumulative_flow_momentum.md',
-  'entry-exit-timing-strategist'
+  'entry-exit-timing-strategist',
+  'us-close-korea-strategist'
 )
 
 Assert-FileContains 'scripts/validate_project.ps1' @(
   'Flow/Momentum tracking',
   'tracking_weekly_cumulative_flow_momentum.md',
   'Entry/Exit timing',
+  'US close Korea preopen strategy',
   'Paper trading'
 )
 
