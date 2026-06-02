@@ -178,6 +178,15 @@ python scripts\factor_screener.py
 
 스크리너는 KOSPI 기준 수익률을 조회하지 못하면 `picks\factor_scores.md` 저장을 중단합니다. 기준지수 데이터가 0으로 대체된 결과를 운영 산출물로 남기지 않기 위한 방어 장치입니다.
 
+데이터 소스 문제를 분리하려면 진단 모드를 먼저 실행하세요:
+
+```powershell
+python scripts\factor_screener.py --diagnose
+python scripts\factor_screener.py --diagnose --diagnose-ticker 005930
+```
+
+진단 모드는 `KRX_ID`/`KRX_PW` 환경변수 존재 여부, KOSPI 기준지수, 샘플 종목 OHLCV, 외국인 수급 조회 성공 여부를 각각 출력하며 `picks\factor_scores.md`를 수정하지 않습니다.
+
 ## 🚀 사용법
 
 ### 풀 리서치 요청
