@@ -1,0 +1,31 @@
+{
+  "as_of": "2026-05-22",
+  "notes": "Sample payload for scripts/run_weekly_flow_momentum_update.ps1 -DataPath",
+  "stocks": {
+    "000660": {
+      "close": 1941000,
+      "foreign_net_shares": -2969723,
+      "inst_net_shares": 1276913,
+      "rsi14": 65.4,
+      "week52_high": 1995000,
+      "sources": "Hankyung close+52w; AlphaSquare flows; Investing RSI"
+    },
+    "005930": {
+      "close": 292500,
+      "foreign_net_shares": -19229766,
+      "inst_net_shares": 9279945,
+      "rsi14": 57.0,
+      "week52_high": 299500,
+      "sources": "Hankyung close+52w; AlphaSquare flows; Investing RSI"
+    },
+    "018260": {
+      "close": 194700,
+      "foreign_net_shares": -7079,
+      "inst_net_shares": 147592,
+      "rsi14": 65.0,
+      "week52_high": 212000,
+      "sources": "Hankyung close+52w; AlphaSquare flows; Investing RSI"
+    }
+  }
+}
+
