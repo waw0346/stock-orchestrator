@@ -288,8 +288,13 @@ Write-Output ''
 Write-Output '== Entry/Exit timing =='
 $timingAgent = Join-Path $root '.claude/agents/entry-exit-timing-strategist.md'
 $timingPlaybook = Join-Path $root 'picks/entry_exit_timing_playbook.md'
+$pullbackAgent = Join-Path $root '.claude/agents/pullback-analyst.md'
+$pullbackPy = Join-Path $root 'scripts/run_pullback_screen.py'
+$pullbackPs1 = Join-Path $root 'scripts/run_pullback_screen.ps1'
+$pullbackDocs = Join-Path $root 'docs/pullback_screen.md'
+$pullbackCandidates = Join-Path $root 'picks/cache/pullback_candidates.json'
 
-foreach ($required in @($timingAgent, $timingPlaybook)) {
+foreach ($required in @($timingAgent, $timingPlaybook, $pullbackAgent, $pullbackPy, $pullbackPs1, $pullbackDocs)) {
   if (Test-Path $required) {
     Write-Output ("OK   {0}" -f (Resolve-Path -Path $required -Relative))
   } else {
@@ -308,12 +313,58 @@ if (Test-Path $timingPlaybook) {
   }
 }
 
+if (Test-Path $pullbackAgent) {
+  $pullbackAgentText = Get-Content -Path $pullbackAgent -Raw -Encoding UTF8
+  foreach ($requiredText in @('pullback-analyst', 'Signal 4', '1.5:1')) {
+    if ($pullbackAgentText -notmatch [regex]::Escape($requiredText)) {
+      Add-Issue -Level 'ERROR' -Area 'Entry/Exit timing' -Message ("Pullback agent missing required text: {0}" -f $requiredText)
+      Write-Output ("FAIL pullback agent - missing {0}" -f $requiredText)
+    }
+  }
+}
+
+if (Test-Path $pullbackDocs) {
+  $pullbackDocsText = Get-Content -Path $pullbackDocs -Raw -Encoding UTF8
+  foreach ($requiredText in @('pullback_candidates.json', '4-signal', 'ENTRY')) {
+    if ($pullbackDocsText -notmatch [regex]::Escape($requiredText)) {
+      Add-Issue -Level 'ERROR' -Area 'Entry/Exit timing' -Message ("Pullback docs missing required text: {0}" -f $requiredText)
+      Write-Output ("FAIL pullback docs - missing {0}" -f $requiredText)
+    }
+  }
+}
+
+if (Test-Path $pullbackCandidates) {
+  try {
+    $pullbackJson = Get-Content -Path $pullbackCandidates -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($null -eq $pullbackJson.candidates) {
+      Add-Issue -Level 'ERROR' -Area 'Entry/Exit timing' -Message 'pullback_candidates.json missing candidates'
+      Write-Output 'FAIL pullback candidates - missing candidates'
+    } else {
+      Write-Output 'OK   .\picks\cache\pullback_candidates.json'
+    }
+  } catch {
+    Add-Issue -Level 'ERROR' -Area 'Entry/Exit timing' -Message ("Could not parse pullback candidates: {0}" -f $_.Exception.Message)
+    Write-Output 'FAIL pullback candidates - invalid JSON'
+  }
+} else {
+  Add-Issue -Level 'WARN' -Area 'Entry/Exit timing' -Message 'Missing pullback candidates snapshot: picks/cache/pullback_candidates.json'
+  Write-Output 'WARN pullback candidates - missing'
+}
+
 Write-Output ''
 Write-Output '== US close Korea preopen strategy =='
 $usCloseAgent = Join-Path $root '.claude/agents/us-close-korea-strategist.md'
 $watchlistFile = Join-Path $root 'picks/WATCHLIST.md'
+$usClosePy = Join-Path $root 'scripts/collect_us_close_data.py'
+$usClosePs1 = Join-Path $root 'scripts/collect_us_close_data.ps1'
+$preopenFilterPy = Join-Path $root 'scripts/run_preopen_filter.py'
+$preopenFilterPs1 = Join-Path $root 'scripts/run_preopen_filter.ps1'
+$usCloseDocs = Join-Path $root 'docs/us_close_korea_preopen.md'
+$usCloseSnapshot = Join-Path $root 'picks/cache/us_close_snapshot.json'
+$preopenCandidates = Join-Path $root 'picks/cache/preopen_candidates.json'
+$preopenFilteredCandidates = Join-Path $root 'picks/cache/preopen_filtered_candidates.json'
 
-foreach ($required in @($usCloseAgent, $watchlistFile)) {
+foreach ($required in @($usCloseAgent, $watchlistFile, $usClosePy, $usClosePs1, $preopenFilterPy, $preopenFilterPs1, $usCloseDocs)) {
   if (Test-Path $required) {
     Write-Output ("OK   {0}" -f (Resolve-Path -Path $required -Relative))
   } else {
@@ -342,6 +393,78 @@ if (Test-Path $watchlistFile) {
   }
 }
 
+if (Test-Path $usCloseDocs) {
+  $usCloseDocsText = Get-Content -Path $usCloseDocs -Raw -Encoding UTF8
+  foreach ($requiredText in @('us_close_snapshot.json', 'preopen_candidates.json', 'preopen_filtered_candidates.json', 'Capital Protection Gate')) {
+    if ($usCloseDocsText -notmatch [regex]::Escape($requiredText)) {
+      Add-Issue -Level 'ERROR' -Area 'US close Korea preopen strategy' -Message ("US close preopen docs missing required text: {0}" -f $requiredText)
+      Write-Output ("FAIL us close docs - missing {0}" -f $requiredText)
+    }
+  }
+}
+
+if (Test-Path $preopenFilteredCandidates) {
+  try {
+    $filteredJson = Get-Content -Path $preopenFilteredCandidates -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($null -eq $filteredJson.final_candidates) {
+      Add-Issue -Level 'ERROR' -Area 'US close Korea preopen strategy' -Message 'preopen_filtered_candidates.json missing final_candidates'
+      Write-Output 'FAIL preopen filtered candidates - missing final_candidates'
+    } else {
+      Write-Output 'OK   .\picks\cache\preopen_filtered_candidates.json'
+    }
+    if ($filteredJson.final_candidates.Count -gt 3) {
+      Add-Issue -Level 'ERROR' -Area 'US close Korea preopen strategy' -Message 'preopen_filtered_candidates.json has more than 3 candidates'
+      Write-Output 'FAIL preopen filtered candidates - more than 3 candidates'
+    }
+  } catch {
+    Add-Issue -Level 'ERROR' -Area 'US close Korea preopen strategy' -Message ("Could not parse preopen filtered candidates: {0}" -f $_.Exception.Message)
+    Write-Output 'FAIL preopen filtered candidates - invalid JSON'
+  }
+} else {
+  Add-Issue -Level 'WARN' -Area 'US close Korea preopen strategy' -Message 'Missing preopen filtered candidates snapshot: picks/cache/preopen_filtered_candidates.json'
+  Write-Output 'WARN preopen filtered candidates - missing'
+}
+
+if (Test-Path $preopenCandidates) {
+  try {
+    $preopenJson = Get-Content -Path $preopenCandidates -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($null -eq $preopenJson.preopen_candidates) {
+      Add-Issue -Level 'ERROR' -Area 'US close Korea preopen strategy' -Message 'preopen_candidates.json missing preopen_candidates'
+      Write-Output 'FAIL preopen candidates - missing preopen_candidates'
+    } else {
+      Write-Output 'OK   .\picks\cache\preopen_candidates.json'
+    }
+    if ($preopenJson.preopen_candidates.Count -gt 3) {
+      Add-Issue -Level 'ERROR' -Area 'US close Korea preopen strategy' -Message 'preopen_candidates.json has more than 3 candidates'
+      Write-Output 'FAIL preopen candidates - more than 3 candidates'
+    }
+  } catch {
+    Add-Issue -Level 'ERROR' -Area 'US close Korea preopen strategy' -Message ("Could not parse preopen candidates: {0}" -f $_.Exception.Message)
+    Write-Output 'FAIL preopen candidates - invalid JSON'
+  }
+} else {
+  Add-Issue -Level 'WARN' -Area 'US close Korea preopen strategy' -Message 'Missing preopen candidates snapshot: picks/cache/preopen_candidates.json'
+  Write-Output 'WARN preopen candidates - missing'
+}
+
+if (Test-Path $usCloseSnapshot) {
+  try {
+    $usCloseJson = Get-Content -Path $usCloseSnapshot -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($null -eq $usCloseJson.quotes -or $usCloseJson.quotes.Count -lt 10) {
+      Add-Issue -Level 'WARN' -Area 'US close Korea preopen strategy' -Message 'US close snapshot has too few quotes'
+      Write-Output 'WARN US close snapshot - too few quotes'
+    } else {
+      Write-Output 'OK   .\picks\cache\us_close_snapshot.json'
+    }
+  } catch {
+    Add-Issue -Level 'ERROR' -Area 'US close Korea preopen strategy' -Message ("Could not parse US close snapshot: {0}" -f $_.Exception.Message)
+    Write-Output 'FAIL US close snapshot - invalid JSON'
+  }
+} else {
+  Add-Issue -Level 'WARN' -Area 'US close Korea preopen strategy' -Message 'Missing US close snapshot: picks/cache/us_close_snapshot.json'
+  Write-Output 'WARN US close snapshot - missing'
+}
+
 Write-Output ''
 Write-Output '== Paper trading =='
 $paperSimulator = Join-Path $root 'scripts/paper_trade_simulator.ps1'
@@ -366,6 +489,237 @@ if (Test-Path $paperRules) {
       Write-Output ("FAIL paper rules - missing {0}" -f $ticker)
     }
   }
+}
+
+Write-Output ''
+Write-Output '== Market data crawler =='
+$marketCrawlerPy = Join-Path $root 'scripts/collect_market_data.py'
+$marketCrawlerPs1 = Join-Path $root 'scripts/collect_market_data.ps1'
+$marketCrawlerDocs = Join-Path $root 'docs/market_data_crawler.md'
+
+foreach ($required in @($marketCrawlerPy, $marketCrawlerPs1, $marketCrawlerDocs)) {
+  if (Test-Path $required) {
+    Write-Output ("OK   {0}" -f (Resolve-Path -Path $required -Relative))
+  } else {
+    Add-Issue -Level 'ERROR' -Area 'Market data crawler' -Message ("Missing required market data crawler file: {0}" -f $required)
+    Write-Output ("FAIL {0} - missing" -f $required)
+  }
+}
+
+if (Test-Path $marketCrawlerDocs) {
+  $marketCrawlerDocsText = Get-Content -Path $marketCrawlerDocs -Raw -Encoding UTF8
+  foreach ($requiredText in @('JSON', 'TOSS_INVEST_TOKEN', 'market_data_snapshot.json', 'technical', 'AllowPartialWrite', 'UpdatePaperPriceSnapshot')) {
+    if ($marketCrawlerDocsText -notmatch [regex]::Escape($requiredText)) {
+      Add-Issue -Level 'ERROR' -Area 'Market data crawler' -Message ("Market data crawler docs missing required text: {0}" -f $requiredText)
+      Write-Output ("FAIL market data crawler docs - missing {0}" -f $requiredText)
+    }
+  }
+}
+
+Write-Output ''
+Write-Output '== Flow data collector =='
+$flowCollectorPy = Join-Path $root 'scripts/collect_flow_data.py'
+$flowCollectorPs1 = Join-Path $root 'scripts/collect_flow_data.ps1'
+$flowCollectorDocs = Join-Path $root 'docs/flow_data_collector.md'
+$flowSnapshot = Join-Path $root 'picks/cache/flow_snapshot.json'
+
+foreach ($required in @($flowCollectorPy, $flowCollectorPs1, $flowCollectorDocs)) {
+  if (Test-Path $required) {
+    Write-Output ("OK   {0}" -f (Resolve-Path -Path $required -Relative))
+  } else {
+    Add-Issue -Level 'ERROR' -Area 'Flow data collector' -Message ("Missing required flow data collector file: {0}" -f $required)
+    Write-Output ("FAIL {0} - missing" -f $required)
+  }
+}
+
+if (Test-Path $flowCollectorDocs) {
+  $flowCollectorDocsText = Get-Content -Path $flowCollectorDocs -Raw -Encoding UTF8
+  foreach ($requiredText in @('flow_snapshot.json', 'foreign_net_buy_5d', 'institution_net_buy_5d')) {
+    if ($flowCollectorDocsText -notmatch [regex]::Escape($requiredText)) {
+      Add-Issue -Level 'ERROR' -Area 'Flow data collector' -Message ("Flow data collector docs missing required text: {0}" -f $requiredText)
+      Write-Output ("FAIL flow data collector docs - missing {0}" -f $requiredText)
+    }
+  }
+}
+
+if (Test-Path $flowSnapshot) {
+  try {
+    $flowJson = Get-Content -Path $flowSnapshot -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($null -eq $flowJson.items) {
+      Add-Issue -Level 'ERROR' -Area 'Flow data collector' -Message 'flow_snapshot.json missing items'
+      Write-Output 'FAIL flow snapshot - missing items'
+    } else {
+      Write-Output 'OK   .\picks\cache\flow_snapshot.json'
+    }
+  } catch {
+    Add-Issue -Level 'ERROR' -Area 'Flow data collector' -Message ("Could not parse flow snapshot: {0}" -f $_.Exception.Message)
+    Write-Output 'FAIL flow snapshot - invalid JSON'
+  }
+} else {
+  Add-Issue -Level 'WARN' -Area 'Flow data collector' -Message 'Missing operating flow snapshot: picks/cache/flow_snapshot.json'
+  Write-Output 'WARN flow snapshot - missing'
+}
+
+Write-Output ''
+Write-Output '== Fundamentals collector =='
+$fundamentalsPy = Join-Path $root 'scripts/collect_fundamentals.py'
+$fundamentalsPs1 = Join-Path $root 'scripts/collect_fundamentals.ps1'
+$fundamentalsDocs = Join-Path $root 'docs/fundamentals_collector.md'
+$fundamentalsSnapshot = Join-Path $root 'picks/cache/fundamentals_snapshot.json'
+
+foreach ($required in @($fundamentalsPy, $fundamentalsPs1, $fundamentalsDocs)) {
+  if (Test-Path $required) {
+    Write-Output ("OK   {0}" -f (Resolve-Path -Path $required -Relative))
+  } else {
+    Add-Issue -Level 'ERROR' -Area 'Fundamentals collector' -Message ("Missing required fundamentals collector file: {0}" -f $required)
+    Write-Output ("FAIL {0} - missing" -f $required)
+  }
+}
+
+if (Test-Path $fundamentalsDocs) {
+  $fundamentalsDocsText = Get-Content -Path $fundamentalsDocs -Raw -Encoding UTF8
+  foreach ($requiredText in @('OpenDART', 'OPENDART_API_KEY', 'Provider', 'pykrx', 'BPS', 'PER', 'PBR', 'fundamentals_snapshot.json')) {
+    if ($fundamentalsDocsText -notmatch [regex]::Escape($requiredText)) {
+      Add-Issue -Level 'ERROR' -Area 'Fundamentals collector' -Message ("Fundamentals collector docs missing required text: {0}" -f $requiredText)
+      Write-Output ("FAIL fundamentals collector docs - missing {0}" -f $requiredText)
+    }
+  }
+}
+
+if (Test-Path $fundamentalsSnapshot) {
+  try {
+    $fundamentalsJson = Get-Content -Path $fundamentalsSnapshot -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($fundamentalsJson.mode -ne 'live') {
+      Add-Issue -Level 'ERROR' -Area 'Fundamentals collector' -Message 'fundamentals_snapshot.json is not a live snapshot'
+      Write-Output 'FAIL fundamentals snapshot - mode is not live'
+    } else {
+      Write-Output 'OK   .\picks\cache\fundamentals_snapshot.json live'
+    }
+
+    if ($fundamentalsJson.provider -ne 'opendart' -and $fundamentalsJson.provider -ne 'pykrx') {
+      Add-Issue -Level 'ERROR' -Area 'Fundamentals collector' -Message ("Unsupported fundamentals provider in snapshot: {0}" -f $fundamentalsJson.provider)
+      Write-Output ("FAIL fundamentals snapshot - unsupported provider {0}" -f $fundamentalsJson.provider)
+    }
+
+    $badItems = @($fundamentalsJson.items | Where-Object { -not $_.ok })
+    if ($badItems.Count -gt 0) {
+      Add-Issue -Level 'ERROR' -Area 'Fundamentals collector' -Message ("Fundamentals snapshot has failed items: {0}" -f (($badItems | ForEach-Object ticker) -join ', '))
+      Write-Output ("FAIL fundamentals snapshot - failed items {0}" -f (($badItems | ForEach-Object ticker) -join ', '))
+    }
+
+    if ($fundamentalsJson.provider -eq 'opendart') {
+      $missingGateMetrics = @($fundamentalsJson.items | Where-Object {
+        $null -eq $_.gate_metrics -or
+        ($null -eq $_.gate_metrics.roe -and $null -eq $_.gate_metrics.debt_ratio -and $null -eq $_.gate_metrics.current_ratio)
+      })
+      if ($missingGateMetrics.Count -gt 0) {
+        Add-Issue -Level 'WARN' -Area 'Fundamentals collector' -Message ("OpenDART snapshot has items without gate metrics: {0}" -f (($missingGateMetrics | ForEach-Object ticker) -join ', '))
+        Write-Output ("WARN fundamentals snapshot - missing gate metrics {0}" -f (($missingGateMetrics | ForEach-Object ticker) -join ', '))
+      } else {
+        Write-Output 'OK   OpenDART gate metrics'
+      }
+    }
+  } catch {
+    Add-Issue -Level 'ERROR' -Area 'Fundamentals collector' -Message ("Could not parse fundamentals snapshot: {0}" -f $_.Exception.Message)
+    Write-Output 'FAIL fundamentals snapshot - invalid JSON'
+  }
+} else {
+  Add-Issue -Level 'WARN' -Area 'Fundamentals collector' -Message 'Missing operating fundamentals snapshot: picks/cache/fundamentals_snapshot.json'
+  Write-Output 'WARN fundamentals snapshot - missing'
+}
+
+Write-Output ''
+Write-Output '== Candidate board =='
+$candidateBoardPy = Join-Path $root 'scripts/run_candidate_board.py'
+$candidateBoardPs1 = Join-Path $root 'scripts/run_candidate_board.ps1'
+$candidateBoardDocs = Join-Path $root 'docs/candidate_board.md'
+$candidateBoardSnapshot = Join-Path $root 'picks/cache/candidate_board.json'
+
+foreach ($required in @($candidateBoardPy, $candidateBoardPs1, $candidateBoardDocs)) {
+  if (Test-Path $required) {
+    Write-Output ("OK   {0}" -f (Resolve-Path -Path $required -Relative))
+  } else {
+    Add-Issue -Level 'ERROR' -Area 'Candidate board' -Message ("Missing required candidate board file: {0}" -f $required)
+    Write-Output ("FAIL {0} - missing" -f $required)
+  }
+}
+
+if (Test-Path $candidateBoardDocs) {
+  $candidateBoardDocsText = Get-Content -Path $candidateBoardDocs -Raw -Encoding UTF8
+  foreach ($requiredText in @('candidate_board.json', 'preopen', 'pullback', 'fundamentals')) {
+    if ($candidateBoardDocsText -notmatch [regex]::Escape($requiredText)) {
+      Add-Issue -Level 'ERROR' -Area 'Candidate board' -Message ("Candidate board docs missing required text: {0}" -f $requiredText)
+      Write-Output ("FAIL candidate board docs - missing {0}" -f $requiredText)
+    }
+  }
+}
+
+if (Test-Path $candidateBoardSnapshot) {
+  try {
+    $candidateBoardJson = Get-Content -Path $candidateBoardSnapshot -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($null -eq $candidateBoardJson.rows) {
+      Add-Issue -Level 'ERROR' -Area 'Candidate board' -Message 'candidate_board.json missing rows'
+      Write-Output 'FAIL candidate board - missing rows'
+    } else {
+      Write-Output 'OK   .\picks\cache\candidate_board.json'
+    }
+  } catch {
+    Add-Issue -Level 'ERROR' -Area 'Candidate board' -Message ("Could not parse candidate board: {0}" -f $_.Exception.Message)
+    Write-Output 'FAIL candidate board - invalid JSON'
+  }
+} else {
+  Add-Issue -Level 'WARN' -Area 'Candidate board' -Message 'Missing operating candidate board: picks/cache/candidate_board.json'
+  Write-Output 'WARN candidate board - missing'
+}
+
+Write-Output ''
+Write-Output '== Fiscal.ai integration =='
+$fiscalAiDocs = Join-Path $root 'docs/fiscal_ai_integration.md'
+$fiscalAiCheckPy = Join-Path $root 'scripts/check_fiscal_ai.py'
+$fiscalAiCheckPs1 = Join-Path $root 'scripts/check_fiscal_ai.ps1'
+$fiscalAiCollectorPy = Join-Path $root 'scripts/collect_fiscal_ai.py'
+$fiscalAiCollectorPs1 = Join-Path $root 'scripts/collect_fiscal_ai.ps1'
+$fiscalAiSnapshot = Join-Path $root 'picks/cache/fiscal_ai_snapshot.json'
+
+foreach ($required in @($fiscalAiCheckPy, $fiscalAiCheckPs1, $fiscalAiCollectorPy, $fiscalAiCollectorPs1)) {
+  if (Test-Path $required) {
+    Write-Output ("OK   {0}" -f (Resolve-Path -Path $required -Relative))
+  } else {
+    Add-Issue -Level 'ERROR' -Area 'Fiscal.ai integration' -Message ("Missing required Fiscal.ai check file: {0}" -f $required)
+    Write-Output ("FAIL {0} - missing" -f $required)
+  }
+}
+
+if (Test-Path $fiscalAiDocs) {
+  Write-Output ("OK   {0}" -f (Resolve-Path -Path $fiscalAiDocs -Relative))
+  $fiscalAiDocsText = Get-Content -Path $fiscalAiDocs -Raw -Encoding UTF8
+  foreach ($requiredText in @('Fiscal.ai', 'FISCAL_AI_API_KEY', 'https://api.fiscal.ai/mcp', 'candidate_board.json')) {
+    if ($fiscalAiDocsText -notmatch [regex]::Escape($requiredText)) {
+      Add-Issue -Level 'ERROR' -Area 'Fiscal.ai integration' -Message ("Fiscal.ai docs missing required text: {0}" -f $requiredText)
+      Write-Output ("FAIL fiscal.ai docs - missing {0}" -f $requiredText)
+    }
+  }
+} else {
+  Add-Issue -Level 'ERROR' -Area 'Fiscal.ai integration' -Message 'Missing docs/fiscal_ai_integration.md'
+  Write-Output 'FAIL docs/fiscal_ai_integration.md - missing'
+}
+
+if (Test-Path $fiscalAiSnapshot) {
+  try {
+    $fiscalAiJson = Get-Content -Path $fiscalAiSnapshot -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($null -eq $fiscalAiJson.items) {
+      Add-Issue -Level 'ERROR' -Area 'Fiscal.ai integration' -Message 'fiscal_ai_snapshot.json missing items'
+      Write-Output 'FAIL fiscal.ai snapshot - missing items'
+    } else {
+      Write-Output 'OK   .\picks\cache\fiscal_ai_snapshot.json'
+    }
+  } catch {
+    Add-Issue -Level 'ERROR' -Area 'Fiscal.ai integration' -Message ("Could not parse Fiscal.ai snapshot: {0}" -f $_.Exception.Message)
+    Write-Output 'FAIL fiscal.ai snapshot - invalid JSON'
+  }
+} else {
+  Add-Issue -Level 'WARN' -Area 'Fiscal.ai integration' -Message 'Missing Fiscal.ai snapshot: picks/cache/fiscal_ai_snapshot.json'
+  Write-Output 'WARN fiscal.ai snapshot - missing'
 }
 
 Write-Output ''

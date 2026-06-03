@@ -18,10 +18,23 @@ if (-not (Test-Path $prices)) {
   throw "Missing price snapshot: $prices"
 }
 
+$entryPrices = Join-Path $root 'picks/paper_price_snapshot.entry.test.json'
+@'
+{
+  "date": "2026-05-13T09:30:00+09:00",
+  "source": "entry scenario",
+  "prices": {
+    "000660": 1720000,
+    "005930": 274000,
+    "018260": 171000
+  }
+}
+'@ | Set-Content -Path $entryPrices -Encoding UTF8
+
 Remove-Item -Path $state -ErrorAction SilentlyContinue
 Remove-Item -Path $ledger -ErrorAction SilentlyContinue
 
-$output = & $simulator -RulesPath $rules -PricesPath $prices -StatePath $state -LedgerPath $ledger -InitialCash 100000000 2>&1
+$output = & $simulator -RulesPath $rules -PricesPath $entryPrices -StatePath $state -LedgerPath $ledger -InitialCash 100000000 2>&1
 $exitCode = if ($null -eq $LASTEXITCODE) { 0 } else { $LASTEXITCODE }
 if ($exitCode -ne 0) {
   throw "Simulator failed with exit code $exitCode`n$($output -join "`n")"
@@ -49,7 +62,7 @@ foreach ($expected in @('timestamp,ticker,name,side,quantity,price,notional,reas
   }
 }
 
-$repeatOutput = & $simulator -RulesPath $rules -PricesPath $prices -StatePath $state -LedgerPath $ledger -InitialCash 100000000 2>&1
+$repeatOutput = & $simulator -RulesPath $rules -PricesPath $entryPrices -StatePath $state -LedgerPath $ledger -InitialCash 100000000 2>&1
 $repeatJson = ($repeatOutput -join "`n") | ConvertFrom-Json
 if (@($repeatJson.orders | Where-Object action -eq 'BUY').Count -ne 0) {
   throw 'Simulator should not create duplicate BUY orders for already-held positions'

@@ -10,6 +10,11 @@ picks/alerts/*.json
 # ── Claude Code 개인 로컬 승인/환경 상태 (공유 불필요) ─────────────────────
 .claude/settings.local.json
 
+# ── 로컬 비밀값 / API 키 (커밋 금지) ───────────────────────────────────────
+.env
+.env.*
+!.env.example
+
 # ── 테스트 아티팩트 (run_paper_trading_tests.ps1 이 생성/삭제) ──────────────
 picks/*.test.json
 picks/*.test.csv

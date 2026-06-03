@@ -189,6 +189,53 @@ python scripts\factor_screener.py --diagnose --diagnose-ticker 005930
 
 진단 모드는 `KRX_ID`/`KRX_PW` 환경변수 존재 여부, KOSPI 기준지수, 샘플 종목 OHLCV, 외국인 수급 조회 성공 여부를 각각 출력하며 `picks\factor_scores.md`를 수정하지 않습니다.
 
+네이버 증권과 토스증권 보강 소스로 운영 시세·업종·테마 스냅샷을 수집하려면:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\collect_market_data.ps1 -UpdatePaperPriceSnapshot
+```
+
+수집 결과는 `picks\cache\market_data_snapshot.json`에 저장되고, `-UpdatePaperPriceSnapshot` 옵션을 주면 `picks\paper_price_snapshot.json`도 갱신됩니다. 토스증권 공식 Open API는 사전신청/토큰 기반이므로 승인 후 `TOSS_INVEST_TOKEN`과 `TOSS_INVEST_QUOTE_URL_TEMPLATE`을 설정하면 보강 소스로 사용합니다. 자세한 운영 절차는 `docs\market_data_crawler.md`를 확인하세요.
+
+OpenDART 공시 기반 재무지표와 주요 계정값을 수집하려면 먼저 인증키를 환경변수로 설정하세요:
+
+```powershell
+setx OPENDART_API_KEY "발급받은_OpenDART_인증키"
+```
+
+새 PowerShell 창에서 기본 provider인 OpenDART로 실행합니다:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\collect_fundamentals.ps1
+```
+
+결과는 `picks\cache\fundamentals_snapshot.json`에 저장됩니다. OpenDART provider는 공시 기반 지표를 `financial_indicators`, `account_values`에 저장하고, KRX 일자 기준 PER/PBR/EPS/BPS가 필요할 때는 보조 provider로 `-Provider pykrx`를 사용할 수 있습니다. 자세한 운영 절차는 `docs\fundamentals_collector.md`를 확인하세요.
+
+외국인/기관 5거래일 수급을 수집하고 시장 스냅샷에 병합하려면:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\collect_flow_data.ps1 -UpdateMarketSnapshot
+```
+
+결과는 `picks\cache\flow_snapshot.json`에 저장됩니다. KRX/pykrx live 수급 조회는 이 환경에서 `empty_response`를 반환해 운영 판단 루프에서 제거했고, 기본 실행은 `disabled` 스냅샷만 남깁니다. 성공 항목이 있는 provider를 다시 연결할 때만 `market_data_snapshot.json`의 `flow` 필드에 병합합니다. 자세한 운영 절차는 `docs\flow_data_collector.md`를 확인하세요.
+
+Fiscal.ai는 한국장 외국인/기관 수급 대체 원천이 아니라 재무/공시/뉴스/가격 보강 provider로 사용합니다. API key와 MCP 연결 방식은 `docs\fiscal_ai_integration.md`를 확인하세요.
+
+Fiscal.ai 연결과 미국 회사 프로필 스냅샷을 점검하려면:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\check_fiscal_ai.ps1 -CompanyKey NASDAQ_MSFT
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\collect_fiscal_ai.ps1 -CompanyKeys "NASDAQ_MSFT,NASDAQ_NVDA,NASDAQ_AAPL"
+```
+
+미국장 장전 후보, 풀백, 펀더멘탈, 시장 상태를 한 화면으로 합치려면:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\run_candidate_board.ps1
+```
+
+결과는 `picks\cache\candidate_board.json`에 저장됩니다. `FOCUS`와 `WATCH`는 리서치 큐 상태이며 직접 매매 지시가 아닙니다. 자세한 구조는 `docs\candidate_board.md`를 확인하세요.
+
 ## 🚀 사용법
 
 ### 풀 리서치 요청
@@ -244,6 +291,14 @@ LG에너지솔루션과 삼성SDI 비교 분석해줘. 재무·리스크·포지
 `Kelly-style sizing`을 조건부 시나리오로 정리합니다.
 직접 매매 지시가 아니라 리서치 기반 의사결정 프레임입니다.
 
+active/watch 종목의 눌림 후보를 자동 점검하려면:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\run_pullback_screen.ps1
+```
+
+결과는 `picks\cache\pullback_candidates.json`에 저장됩니다. 자세한 운영 절차는 `docs\pullback_screen.md`를 확인하세요.
+
 ### 미국장 마감 후 한국장 전략
 
 ```
@@ -253,6 +308,20 @@ LG에너지솔루션과 삼성SDI 비교 분석해줘. 재무·리스크·포지
 `@us-close-korea-strategist`가 미국 지수, 섹터 ETF, 주도주, 금리, 달러, 원자재 신호를 한국 관련 섹터와 종목으로 매핑합니다.
 결과는 장전 집중 후보, 관찰 후보, BLOCK 후보로 나누며 `picks/WATCHLIST.md` 업데이트안으로 사용합니다.
 신규 추천픽 저장은 별도 `Capital Protection Gate` 통과 후에만 허용됩니다.
+
+미국장 마감 스냅샷과 장전 후보 JSON을 먼저 생성하려면:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\collect_us_close_data.ps1
+```
+
+결과는 `picks\cache\us_close_snapshot.json`과 `picks\cache\preopen_candidates.json`에 저장됩니다. 자세한 운영 절차는 `docs\us_close_korea_preopen.md`를 확인하세요.
+
+한국장 가격/갭 필터까지 적용하려면:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\run_preopen_filter.ps1
+```
 
 ### 포트폴리오 통제
 
