@@ -18,18 +18,22 @@ if (-not (Test-Path $prices)) {
   throw "Missing price snapshot: $prices"
 }
 
+# Count active positions from rules to set dynamic expectations
+$rulesJson = Get-Content -Path $rules -Raw -Encoding UTF8 | ConvertFrom-Json
+$activePositions = @($rulesJson.positions | Where-Object { $_.status -eq 'active' })
+$activeCount = $activePositions.Count
+
 $entryPrices = Join-Path $root 'picks/paper_price_snapshot.entry.test.json'
-@'
-{
-  "date": "2026-05-13T09:30:00+09:00",
-  "source": "entry scenario",
-  "prices": {
-    "000660": 1720000,
-    "005930": 274000,
-    "018260": 171000
-  }
+$entryPricesObj = @{
+  date = '2026-05-13T09:30:00+09:00'
+  source = 'entry scenario'
+  prices = @{}
 }
-'@ | Set-Content -Path $entryPrices -Encoding UTF8
+foreach ($pos in $activePositions) {
+  # Use a price within entry range to trigger BUY
+  $entryPricesObj.prices[$pos.ticker] = $pos.entry_low
+}
+$entryPricesObj | ConvertTo-Json -Depth 5 | Set-Content -Path $entryPrices -Encoding UTF8
 
 Remove-Item -Path $state -ErrorAction SilentlyContinue
 Remove-Item -Path $ledger -ErrorAction SilentlyContinue
@@ -69,22 +73,21 @@ if (@($repeatJson.orders | Where-Object action -eq 'BUY').Count -ne 0) {
 }
 
 $targetPrices = Join-Path $root 'picks/paper_price_snapshot.target.test.json'
-@'
-{
-  "date": "2026-05-13T15:30:00+09:00",
-  "source": "target scenario",
-  "prices": {
-    "000660": 2160000,
-    "005930": 330000,
-    "018260": 200000
-  }
+$targetPricesObj = @{
+  date = '2026-05-13T15:30:00+09:00'
+  source = 'target scenario'
+  prices = @{}
 }
-'@ | Set-Content -Path $targetPrices -Encoding UTF8
+foreach ($pos in $activePositions) {
+  # Use a price above target to trigger SELL
+  $targetPricesObj.prices[$pos.ticker] = $pos.target
+}
+$targetPricesObj | ConvertTo-Json -Depth 5 | Set-Content -Path $targetPrices -Encoding UTF8
 
 $targetOutput = & $simulator -RulesPath $rules -PricesPath $targetPrices -StatePath $state -LedgerPath $ledger -InitialCash 100000000 2>&1
 $targetJson = ($targetOutput -join "`n") | ConvertFrom-Json
-if (@($targetJson.orders | Where-Object { $_.action -eq 'SELL' -and $_.reason -eq 'target_hit' }).Count -ne 3) {
-  throw 'Target scenario should create one target_hit SELL per open position'
+if (@($targetJson.orders | Where-Object { $_.action -eq 'SELL' -and $_.reason -eq 'target_hit' }).Count -ne $activeCount) {
+  throw "Target scenario should create one target_hit SELL per open position (expected $activeCount)"
 }
 
 $secondTargetOutput = & $simulator -RulesPath $rules -PricesPath $targetPrices -StatePath $state -LedgerPath $ledger -InitialCash 100000000 2>&1

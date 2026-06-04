@@ -67,7 +67,7 @@ def collect_preopen_items(preopen: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
 
 
 def score_row(preopen: Optional[Dict[str, Any]], pullback: Optional[Dict[str, Any]], fundamentals: Optional[Dict[str, Any]], market: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-    """Score one ticker with conservative gates."""
+    """Score one ticker with conservative gates including valuation checks."""
     checks = {
         "preopen": preopen.get("decision") if preopen else None,
         "pullback": pullback.get("decision") if pullback else None,
@@ -99,6 +99,50 @@ def score_row(preopen: Optional[Dict[str, Any]], pullback: Optional[Dict[str, An
     elif checks["preopen"] == "BLOCK":
         block_reasons.append("preopen_block")
 
+    # Valuation checks from enriched fundamentals
+    valuation: Dict[str, Any] = {}
+    if fundamentals and fundamentals.get("ok"):
+        per = fundamentals.get("per")
+        pbr = fundamentals.get("pbr")
+        eps = fundamentals.get("eps")
+        market_cap = fundamentals.get("market_cap")
+        week52_high = fundamentals.get("week52_high")
+        week52_low = fundamentals.get("week52_low")
+        enriched = fundamentals.get("valuation_fields_available", False)
+
+        if per is not None:
+            valuation["per"] = per
+        if pbr is not None:
+            valuation["pbr"] = pbr
+        if eps is not None:
+            valuation["eps"] = eps
+        if market_cap is not None:
+            valuation["market_cap"] = market_cap
+        if week52_high is not None:
+            valuation["week52_high"] = week52_high
+        if week52_low is not None:
+            valuation["week52_low"] = week52_low
+
+        # Extreme valuation → BLOCK
+        if per is not None and per > 100:
+            block_reasons.append("valuation_per_extreme")
+        elif per is not None and per > 50:
+            checks["valuation"] = "WARN"
+        if pbr is not None and pbr > 10:
+            block_reasons.append("valuation_pbr_extreme")
+        elif pbr is not None and pbr > 5:
+            checks["valuation"] = "WARN"
+        # Negative EPS (loss-making)
+        if eps is not None and eps < 0:
+            if checks.get("valuation") != "WARN":
+                checks["valuation"] = "WARN"
+
+        # Enriched valuation bonus
+        if enriched and per is not None and pbr is not None:
+            score += 1
+            if checks.get("valuation") is None:
+                checks["valuation"] = "OK"
+
     if block_reasons:
         decision = "BLOCK"
     elif score >= 7:
@@ -108,12 +152,15 @@ def score_row(preopen: Optional[Dict[str, Any]], pullback: Optional[Dict[str, An
     else:
         decision = "PASS"
 
-    return {
+    result = {
         "score": score,
         "decision": decision,
         "checks": checks,
         "block_reasons": block_reasons,
     }
+    if valuation:
+        result["valuation"] = valuation
+    return result
 
 
 def collect_us_catalysts(fiscal_ai_news: Dict[str, Any], limit: int = 10) -> List[Dict[str, Any]]:

@@ -1,6 +1,6 @@
 # Current Project State
 
-기준일: 2026-05-18
+기준일: 2026-06-04
 
 이 파일은 현재 운영 기준을 빠르게 확인하기 위한 상태표입니다. 혼동이 생기면 이 파일과 `README.md`, `CLAUDE.md`를 우선합니다.
 
@@ -23,6 +23,7 @@
 - `CLAUDE_v2.md`
 - `00_setup_guide.md`
 - `01_project_instructions.md`
+- `.claude/agents/kfc/` — 과거 설계 스펙 보관본
 
 ## Active Agent Groups
 
@@ -46,6 +47,13 @@
 - `portfolio-manager`
 - `position-sizing-analyst`
 - `performance-reviewer`
+
+스크리닝:
+- `preopen-foreign-scanner`
+- `pullback-analyst`
+
+기록/DB:
+- `obsi` — Obsidian Vault 기록, 오류 메모, 실행 로그, Todo 분류 관리
 
 ## Current Risk Controls
 
@@ -79,6 +87,12 @@ powershell -ExecutionPolicy Bypass -File .\tests\run_validation_tests.ps1
 powershell -ExecutionPolicy Bypass -File .\tests\run_change_review_tests.ps1
 powershell -ExecutionPolicy Bypass -File .\tests\run_integration_tests.ps1
 powershell -ExecutionPolicy Bypass -File .\tests\run_paper_trading_tests.ps1
+
+# 밸류에이션 보강 포함 펀더멘탈 수집
+powershell -ExecutionPolicy Bypass -File .\scripts\collect_fundamentals.ps1
+
+# 보강 없이 OpenDART만 수집
+powershell -ExecutionPolicy Bypass -File .\scripts\collect_fundamentals.ps1 -SkipEnrich
 ```
 
 ## Known Operational Note

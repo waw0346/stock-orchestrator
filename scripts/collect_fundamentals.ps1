@@ -11,7 +11,8 @@ param(
   [string]$MarketSnapshotPath = '',
   [string]$PreopenCandidatesPath = '',
   [switch]$RefreshCorpCodes,
-  [switch]$OfflineSample
+  [switch]$OfflineSample,
+  [switch]$SkipEnrich
 )
 
 $ErrorActionPreference = 'Stop'
@@ -44,6 +45,9 @@ if ($RefreshCorpCodes) {
 }
 if ($OfflineSample) {
   $argsList += '--offline-sample'
+}
+if ($SkipEnrich) {
+  $argsList += '--skip-enrich'
 }
 
 python @argsList

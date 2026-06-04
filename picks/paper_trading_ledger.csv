@@ -1,4 +1,7 @@
-﻿timestamp,ticker,name,side,quantity,price,notional,reason
+timestamp,ticker,name,side,quantity,price,notional,reason
 2026-05-12T01:50:00+09:00,000660,SK하이닉스,BUY,2,1750000,3500000,entry_zone
 2026-05-12T01:50:00+09:00,005930,삼성전자,BUY,21,275000,5775000,entry_zone
 2026-05-12T01:50:00+09:00,018260,삼성SDS,BUY,21,171000,3591000,entry_zone
+2026-05-22T00:00:00+09:00,005930,삼성전자,SELL,21,295000,6195000,user_directed_close
+2026-05-28T00:00:00+09:00,000660,SK하이닉스,SELL,2,1940000,3880000,user_directed_close
+2026-06-04T01:54:48+09:00,018260,삼성SDS,SELL,10,300500,3005000,target_hit

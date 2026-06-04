@@ -3,16 +3,20 @@
 """
 Collect Korean stock fundamentals from OpenDART or pykrx.
 
+Optionally enriches OpenDART data with Google Finance and DATA.GO.KR.
+
 Outputs:
   picks/cache/fundamentals_snapshot.json
 """
 
 import argparse
 import io
+import html
 import json
 import os
 import re
 import sys
+import time
 import urllib.parse
 import urllib.request
 import zipfile
@@ -435,8 +439,167 @@ def collect_pykrx(args: argparse.Namespace, tickers: Dict[str, str]) -> List[Dic
     return items
 
 
-def collect(args: argparse.Namespace) -> Dict[str, Any]:
-    """Collect fundamentals snapshot."""
+def parse_scaled_number(value: Any) -> Optional[float]:
+    """Parse human-readable market values from web/API strings."""
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return clean_number(value)
+    text = html.unescape(str(value)).strip()
+    if not text or text in {"-", "N/A"}:
+        return None
+    text = text.replace(",", "").replace("KRW", "").replace("₩", "").strip()
+    multiplier = 1.0
+    unit_multipliers = {
+        "천": 1_000,
+        "만": 10_000,
+        "억": 100_000_000,
+        "조": 1_000_000_000_000,
+        "K": 1_000,
+        "M": 1_000_000,
+        "B": 1_000_000_000,
+        "T": 1_000_000_000_000,
+    }
+    unit_match = re.search(r"([천만억조KMBT])$", text)
+    if unit_match:
+        multiplier = unit_multipliers[unit_match.group(1)]
+        text = text[:-1].strip()
+    number = clean_number(text)
+    if number is None:
+        return None
+    return round(float(number) * multiplier, 6)
+
+
+def extract_google_value(page: str, label_patterns: List[str]) -> Optional[float]:
+    """Extract a nearby numeric value from a Google Finance HTML page."""
+    compact = re.sub(r"\s+", " ", page)
+    for label in label_patterns:
+        match = re.search(label + r".{0,300}?>([^<>]+)</", compact, flags=re.IGNORECASE)
+        if match:
+            parsed = parse_scaled_number(match.group(1))
+            if parsed is not None:
+                return parsed
+    return None
+
+
+def collect_google_finance(tickers: Dict[str, str], timeout: int = 10, sleep_seconds: float = 0.5) -> Dict[str, Dict[str, Any]]:
+    """Best-effort Google Finance valuation scrape."""
+    results: Dict[str, Dict[str, Any]] = {}
+    headers = {
+        "Accept": "text/html,application/xhtml+xml",
+        "User-Agent": "Mozilla/5.0 stock-orchestrator/1.0",
+    }
+    for ticker in tickers:
+        url = f"https://www.google.com/finance/quote/{ticker}:KRX"
+        try:
+            request = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                page = response.read().decode("utf-8", errors="ignore")
+            data = {
+                "per": extract_google_value(page, [r"P/E ratio", r"PER"]),
+                "market_cap": extract_google_value(page, [r"Market cap", r"시가총액"]),
+                "div": extract_google_value(page, [r"Dividend yield", r"배당수익률"]),
+                "week52_high": extract_google_value(page, [r"52-week high", r"52주 최고"]),
+                "week52_low": extract_google_value(page, [r"52-week low", r"52주 최저"]),
+            }
+            results[ticker] = {key: value for key, value in data.items() if value is not None}
+        except Exception:
+            results[ticker] = {}
+        if sleep_seconds > 0:
+            time.sleep(sleep_seconds)
+    return results
+
+
+def collect_data_go_kr(tickers: Dict[str, str], api_key: str, date: str, timeout: int = 15) -> Dict[str, Dict[str, Any]]:
+    """Best-effort DATA.GO.KR stock price info lookup."""
+    results: Dict[str, Dict[str, Any]] = {}
+    base_url = "https://apis.data.go.kr/1160100/service/GetStockSecuritiesInfoService/getStockPriceInfo"
+    for ticker in tickers:
+        params = {
+            "serviceKey": api_key,
+            "numOfRows": "1",
+            "pageNo": "1",
+            "resultType": "json",
+            "basDt": date,
+            "likeSrtnCd": ticker,
+        }
+        try:
+            url = f"{base_url}?{urllib.parse.urlencode(params)}"
+            with urllib.request.urlopen(url, timeout=timeout) as response:
+                data = json.loads(response.read().decode("utf-8", errors="ignore"))
+            body = data.get("response", {}).get("body", {})
+            items = body.get("items", {}).get("item", [])
+            if isinstance(items, dict):
+                items = [items]
+            row = items[0] if items else {}
+            results[ticker] = {
+                "market_cap": parse_amount(row.get("mrktTotAmt")),
+                "listed_shares": parse_amount(row.get("lstgStCnt")),
+            }
+            results[ticker] = {key: value for key, value in results[ticker].items() if value is not None}
+        except Exception:
+            results[ticker] = {}
+    return results
+
+
+def enrich_items(items: List[Dict[str, Any]], google_data: Dict[str, Dict[str, Any]], datagokr_data: Dict[str, Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Merge valuation enrichment into OpenDART items without changing failed rows."""
+    enriched_items: List[Dict[str, Any]] = []
+    for item in items:
+        row = dict(item)
+        ticker = str(row.get("ticker", "")).zfill(6)
+        sources: List[str] = []
+        google = google_data.get(ticker, {})
+        datagokr = datagokr_data.get(ticker, {})
+
+        for key in ("per", "market_cap", "div", "week52_high", "week52_low"):
+            if google.get(key) is not None and row.get(key) is None:
+                row[key] = google[key]
+                if "google_finance" not in sources:
+                    sources.append("google_finance")
+
+        for key in ("market_cap", "listed_shares"):
+            if datagokr.get(key) is not None and row.get(key) is None:
+                row[key] = datagokr[key]
+                if "data_go_kr" not in sources:
+                    sources.append("data_go_kr")
+
+        account_values = row.get("account_values") or {}
+        market_cap = row.get("market_cap")
+        listed_shares = row.get("listed_shares")
+        equity = account_values.get("자본총계")
+        net_income = account_values.get("당기순이익")
+
+        if market_cap and net_income and not row.get("per") and net_income > 0:
+            row["per"] = round(market_cap / net_income, 4)
+            sources.append("computed")
+        if market_cap and equity and not row.get("pbr") and equity > 0:
+            row["pbr"] = round(market_cap / equity, 4)
+            sources.append("computed")
+        if listed_shares and net_income and not row.get("eps") and listed_shares > 0:
+            row["eps"] = round(net_income / listed_shares, 4)
+            sources.append("computed")
+        if listed_shares and equity and not row.get("bps") and listed_shares > 0:
+            row["bps"] = round(equity / listed_shares, 4)
+            sources.append("computed")
+
+        valuation_fields = [field for field in ("bps", "per", "pbr", "eps", "div", "dps") if row.get(field) is not None]
+        if valuation_fields:
+            row["valuation_fields_available"] = True
+            row["missing_fields"] = [field for field in ("bps", "per", "pbr", "eps", "div", "dps") if row.get(field) is None]
+        if sources:
+            row["enrichment_sources"] = sorted(set(sources))
+        enriched_items.append(row)
+    return enriched_items
+
+
+def collect(args: argparse.Namespace, enrich: bool = True) -> Dict[str, Any]:
+    """Collect fundamentals snapshot.
+
+    When *enrich* is True and the provider is ``opendart``, supplementary
+    data from Google Finance and DATA.GO.KR is fetched and merged into
+    the results to fill valuation fields (PER, PBR, EPS, BPS, etc.).
+    """
     tickers = resolve_tickers(args)
     if not tickers:
         raise RuntimeError("No tickers resolved. Pass --tickers or populate picks/INDEX.md.")
@@ -452,6 +615,52 @@ def collect(args: argparse.Namespace) -> Dict[str, Any]:
     else:
         raise RuntimeError(f"Unsupported provider: {provider}")
 
+    # --- enrichment (opendart only) ---
+    enrichment_meta: Dict[str, Any] = {"enabled": False}
+    if enrich and provider == "opendart":
+        enrichment_meta["enabled"] = True
+
+        # Google Finance (best-effort)
+        google_data: Dict[str, Dict[str, Any]] = {}
+        try:
+            google_timeout = getattr(args, "google_timeout", 10)
+            google_sleep = getattr(args, "google_sleep", 0.5)
+            print("Enriching: fetching Google Finance data …", file=sys.stderr)
+            google_data = collect_google_finance(
+                tickers, timeout=google_timeout, sleep_seconds=google_sleep,
+            )
+            enrichment_meta["google_finance"] = {
+                "tickers_ok": len([v for v in google_data.values() if v]),
+                "tickers_failed": len([v for v in google_data.values() if not v]),
+            }
+        except Exception as exc:
+            print(f"WARN google_finance enrichment failed: {exc}", file=sys.stderr)
+            enrichment_meta["google_finance"] = {"error": str(exc)}
+
+        # DATA.GO.KR (best-effort, only when API key available)
+        datagokr_data: Dict[str, Dict[str, Any]] = {}
+        datagokr_key_env = getattr(args, "data_go_kr_api_key_env", "DATA_GO_KR_API_KEY")
+        datagokr_api_key = os.environ.get(datagokr_key_env, "").strip()
+        if not datagokr_api_key:
+            datagokr_api_key = read_env_file_value(Path(args.env_file), datagokr_key_env)
+        if datagokr_api_key:
+            try:
+                print("Enriching: fetching DATA.GO.KR data …", file=sys.stderr)
+                datagokr_data = collect_data_go_kr(
+                    tickers, api_key=datagokr_api_key, date=args.date,
+                )
+                enrichment_meta["data_go_kr"] = {
+                    "tickers_ok": len([v for v in datagokr_data.values() if v]),
+                    "tickers_failed": len([v for v in datagokr_data.values() if not v]),
+                }
+            except Exception as exc:
+                print(f"WARN data_go_kr enrichment failed: {exc}", file=sys.stderr)
+                enrichment_meta["data_go_kr"] = {"error": str(exc)}
+        else:
+            enrichment_meta["data_go_kr"] = {"skipped": "no_api_key"}
+
+        items = enrich_items(items, google_data, datagokr_data)
+
     return {
         "generated_at": now_kst().isoformat(timespec="seconds"),
         "date": args.date,
@@ -460,6 +669,7 @@ def collect(args: argparse.Namespace) -> Dict[str, Any]:
         "provider": provider,
         "source": provider if provider != "offline_sample" else "offline_fixture",
         "fields": [field.lower() for field in FUNDAMENTAL_FIELDS],
+        "enrichment": enrichment_meta,
         "items": items,
     }
 
@@ -489,6 +699,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--preopen-candidates-path", default=str(DEFAULT_PREOPEN_CANDIDATES))
     parser.add_argument("--snapshot-path", default=str(DEFAULT_SNAPSHOT))
     parser.add_argument("--offline-sample", action="store_true", help="Use deterministic fixture data without network.")
+    parser.add_argument("--enrich", action="store_true", default=True, help="Enrich OpenDART data with Google Finance and DATA.GO.KR (default).")
+    parser.add_argument("--skip-enrich", action="store_true", help="Disable enrichment from supplementary sources.")
+    parser.add_argument("--data-go-kr-api-key-env", default="DATA_GO_KR_API_KEY", help="Env-var name for DATA.GO.KR API key.")
+    parser.add_argument("--google-timeout", type=int, default=10, help="HTTP timeout for Google Finance requests.")
+    parser.add_argument("--google-sleep", type=float, default=0.5, help="Sleep between Google Finance requests.")
     return parser.parse_args()
 
 
@@ -506,7 +721,8 @@ def main() -> int:
         provider = "offline_sample" if args.offline_sample else args.provider
         if provider == "offline_sample" and Path(args.snapshot_path) == DEFAULT_SNAPSHOT:
             raise RuntimeError("offline_sample cannot write the default operating snapshot. Pass --snapshot-path with a .test.json or .sample.json file.")
-        snapshot = collect(args)
+        do_enrich = args.enrich and not args.skip_enrich
+        snapshot = collect(args, enrich=do_enrich)
         write_json(Path(args.snapshot_path), snapshot)
         print(f"wrote {args.snapshot_path}")
         missing = [item["ticker"] for item in snapshot["items"] if not item.get("ok")]

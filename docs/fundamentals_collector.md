@@ -13,6 +13,45 @@ OpenDART는 공시 기반 재무정보 원천입니다. KRX daily `BPS`, `PER`, 
 
 기본 universe는 `picks/INDEX.md`, `picks/paper_trading_rules.json`, `picks/cache/market_data_snapshot.json`, `picks/cache/preopen_candidates.json`를 합칩니다. 장전 후보와 시장 스냅샷에 새로 들어온 종목도 펀더멘탈 보강 대상에 포함됩니다.
 
+## Enrichment (밸류에이션 보강)
+
+기본 실행 시 OpenDART 수집 후 Google Finance와 DATA.GO.KR에서 밸류에이션 지표를 자동 보강합니다.
+
+### Google Finance
+- `https://www.google.com/finance/quote/{ticker}:KRX` 페이지에서 PER, 시가총액, 52주 고저, 배당수익률을 스크래핑합니다.
+- 별도 인증 불필요. 네트워크 장애 시 해당 필드가 null로 남습니다.
+
+### DATA.GO.KR (공공데이터포털)
+- 금융위원회 주식시세정보 API에서 시가총액(`mrktTotAmt`)과 상장주식수(`lstgStCnt`)를 조회합니다.
+- T+1 기준 데이터입니다.
+
+### DATA.GO.KR 키 설정
+
+공공데이터포털(https://www.data.go.kr)에서 '금융위원회_주식시세정보' API를 신청하고 인증키를 발급받습니다.
+
+```powershell
+setx DATA_GO_KR_API_KEY "발급받은_공공데이터포털_인증키(Decoding)"
+```
+
+또는 `.env.local`에 추가:
+
+```
+DATA_GO_KR_API_KEY=발급받은_공공데이터포털_인증키(Decoding)
+```
+
+### 밸류에이션 자동 계산
+
+- PER: Google Finance → 시가총액 / 당기순이익
+- PBR: 시가총액 / 자본총계
+- EPS: Google Finance → 당기순이익 / 상장주식수
+- BPS: 자본총계 / 상장주식수
+
+보강을 건너뛰려면:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\collect_fundamentals.ps1 -SkipEnrich
+```
+
 ## OpenDART 키 설정
 
 OpenDART 인증키를 사용자 환경변수로 설정합니다. 키를 코드, README, 커밋에 넣지 마세요.
@@ -88,7 +127,12 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\collect_fundamentals
 - `items[].financial_indicators`: OpenDART 주요 재무지표
 - `items[].account_values`: OpenDART 주요 계정값
 - `items[].gate_metrics`: 운영 게이트용 핵심 지표(`roe`, `debt_ratio`, `current_ratio`, `operating_income_growth_yoy`, `revenue_growth_yoy`, `net_income_margin`)
-- `items[].valuation_fields_available`: KRX daily valuation 필드 사용 가능 여부
+- `items[].valuation_fields_available`: KRX daily valuation 필드 사용 가능 여부 (enrichment 후 true)
 - `items[].bps`, `per`, `pbr`, `eps`, `div`, `dps`: pykrx provider에서 채워지는 KRX daily valuation 필드
+- `items[].market_cap`: 시가총액 (Google Finance 또는 DATA.GO.KR)
+- `items[].listed_shares`: 상장주식수 (DATA.GO.KR)
+- `items[].week52_high`: 52주 최고가 (Google Finance)
+- `items[].week52_low`: 52주 최저가 (Google Finance)
+- `items[].enrichment_sources`: 보강에 사용된 소스 목록
 
 이 수집기는 실시간 시세 수집기를 대체하지 않습니다. 네이버/토스 수집기는 장중 가격 확인용, OpenDART 수집기는 공시 기반 재무 건전성 확인용입니다.

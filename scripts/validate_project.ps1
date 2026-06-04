@@ -97,7 +97,8 @@ $agentFiles = Get-ChildItem -Path $agentDir -Filter '*.md' | Where-Object {
     'market-regime-analyst',
     'portfolio-manager',
     'position-sizing-analyst',
-    'performance-reviewer'
+    'performance-reviewer',
+    'obsi'
   )
 }
 
@@ -114,6 +115,70 @@ foreach ($agent in $agentFiles) {
   } else {
     Add-Issue -Level 'ERROR' -Area 'Agent JSON contract' -Message ("Missing required JSON output contract: {0}" -f $agent.Name)
     Write-Output ("FAIL {0} - missing required JSON output contract" -f $agent.Name)
+  }
+}
+
+Write-Output ''
+Write-Output '== Obsidian record DB =='
+$obsiAgent = Join-Path $root '.claude/agents/obsi.md'
+$obsidianIndex = Join-Path $root 'obsidian/stock_log/Stock Orchestrator Index.md'
+$gitignoreFile = Join-Path $root '.gitignore'
+
+if (Test-Path $obsiAgent) {
+  Write-Output ("OK   {0}" -f (Resolve-Path -Path $obsiAgent -Relative))
+  $obsiText = Get-Content -Path $obsiAgent -Raw -Encoding UTF8
+  foreach ($requiredText in @('name: obsi', 'Obsidian', 'git', 'stock_log', '07_stock_analysis', '08_error_reviews', '09_decision_journal', '11_calendar', '_templates', '_moc')) {
+    if ($obsiText -notmatch [regex]::Escape($requiredText)) {
+      Add-Issue -Level 'ERROR' -Area 'Obsidian record DB' -Message ("obsi agent missing required text: {0}" -f $requiredText)
+      Write-Output ("FAIL obsi agent - missing {0}" -f $requiredText)
+    }
+  }
+} else {
+  Add-Issue -Level 'ERROR' -Area 'Obsidian record DB' -Message 'Missing .claude/agents/obsi.md'
+  Write-Output 'FAIL .claude/agents/obsi.md - missing'
+}
+
+if (Test-Path $gitignoreFile) {
+  $gitignoreText = Get-Content -Path $gitignoreFile -Raw -Encoding UTF8
+  if ($gitignoreText -match '(?m)^obsidian/$') {
+    Write-Output 'OK   .gitignore obsidian/'
+  } else {
+    Add-Issue -Level 'ERROR' -Area 'Obsidian record DB' -Message '.gitignore must exclude obsidian/'
+    Write-Output 'FAIL .gitignore - missing obsidian/'
+  }
+}
+
+if (Test-Path $obsidianIndex) {
+  Write-Output 'OK   obsidian stock_log index'
+} else {
+  Add-Issue -Level 'WARN' -Area 'Obsidian record DB' -Message 'Missing local Obsidian stock_log index'
+  Write-Output 'WARN obsidian stock_log index - missing'
+}
+
+foreach ($relative in @(
+  'obsidian/stock_log/_moc/Obsidian Operating System Design.md',
+  'obsidian/stock_log/_moc/Stock Analysis MOC.md',
+  'obsidian/stock_log/_templates/Daily Log Template.md',
+  'obsidian/stock_log/_templates/Execution Log Template.md',
+  'obsidian/stock_log/_templates/Market News Template.md',
+  'obsidian/stock_log/_templates/Candidate Board Template.md',
+  'obsidian/stock_log/_templates/Stock Analysis Template.md',
+  'obsidian/stock_log/_templates/Error Review Template.md',
+  'obsidian/stock_log/_templates/Decision Journal Template.md',
+  'obsidian/stock_log/_templates/Stock Calendar Day Template.md',
+  'obsidian/stock_log/_templates/Stock Calendar Month Template.md',
+  'obsidian/stock_log/_templates/Stock Calendar Year Template.md',
+  'obsidian/stock_log/_moc/Stock Calendar MOC.md',
+  'obsidian/stock_log/11_calendar/yearly/2026 Stock Calendar.md',
+  'obsidian/stock_log/11_calendar/monthly/2026-06 Stock Calendar.md',
+  'obsidian/stock_log/11_calendar/daily/2026-06-04 Stock Calendar.md'
+)) {
+  $path = Join-Path $root $relative
+  if (Test-Path $path) {
+    Write-Output ("OK   {0}" -f $relative)
+  } else {
+    Add-Issue -Level 'WARN' -Area 'Obsidian record DB' -Message ("Missing local Obsidian design/template file: {0}" -f $relative)
+    Write-Output ("WARN {0} - missing" -f $relative)
   }
 }
 
@@ -484,6 +549,11 @@ foreach ($required in @($paperSimulator, $paperRules, $paperPrices, $paperDocs))
 if (Test-Path $paperRules) {
   $paperRulesText = Get-Content -Path $paperRules -Raw -Encoding UTF8
   foreach ($ticker in @('000660', '005930', '018260')) {
+    # Skip closed/completed picks — they are no longer required in paper trading rules
+    $indexStatus = $indexStatusByTicker[$ticker]
+    if ($indexStatus -eq 'closed' -or $indexStatus -eq 'completed') {
+      continue
+    }
     if ($paperRulesText -notmatch $ticker) {
       Add-Issue -Level 'ERROR' -Area 'Paper trading' -Message ("Paper trading rules missing ticker: {0}" -f $ticker)
       Write-Output ("FAIL paper rules - missing {0}" -f $ticker)

@@ -39,6 +39,7 @@ Anthropic의 [subagent 패턴](https://docs.claude.com/en/docs/claude-code/sub-a
 │  portfolio-manager (포트폴리오 적합성)      │
 │  position-sizing-analyst (포지션 크기)      │
 │  performance-reviewer (성과 복기)           │
+│  obsi (Obsidian 기록 DB 관리)               │
 └─────────────────────────────────────────────┘
 ```
 
@@ -73,7 +74,8 @@ stock orchestrator/
 │       ├── market-regime-analyst.md
 │       ├── portfolio-manager.md
 │       ├── position-sizing-analyst.md
-│       └── performance-reviewer.md
+│       ├── performance-reviewer.md
+│       └── obsi.md
 ├── picks/                              ← 추천픽 저장·추적
 ├── picks/postmortems/                  ← 실패 복기 로그
 ├── docs/pre_trade_checklist.md         ← 매수 전 통제 체크리스트

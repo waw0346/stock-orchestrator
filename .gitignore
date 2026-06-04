@@ -15,6 +15,9 @@ picks/alerts/*.json
 .env.*
 !.env.example
 
+# ── Obsidian 개인 기록 DB (코드와 분리, git 관리 제외) ─────────────────────
+obsidian/
+
 # ── 테스트 아티팩트 (run_paper_trading_tests.ps1 이 생성/삭제) ──────────────
 picks/*.test.json
 picks/*.test.csv
