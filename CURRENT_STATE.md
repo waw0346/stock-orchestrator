@@ -93,6 +93,9 @@ powershell -ExecutionPolicy Bypass -File .\scripts\collect_fundamentals.ps1
 
 # 보강 없이 OpenDART만 수집
 powershell -ExecutionPolicy Bypass -File .\scripts\collect_fundamentals.ps1 -SkipEnrich
+
+# 장마감 후 외국인 연속 순매수 후보 스캔
+powershell -ExecutionPolicy Bypass -File .\scripts\find_foreign_streaks.ps1 -InputCsvPath .\picks\cache\foreign_flow_history.csv
 ```
 
 ## Known Operational Note

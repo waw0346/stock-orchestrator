@@ -22,6 +22,7 @@ foreach ($expected in @(
   'Pick data quality',
   'MCP config',
   'US close Korea preopen strategy',
+  'Foreign streak scanner',
   'Capital protection gate',
   'Summary'
 )) {
@@ -40,7 +41,8 @@ foreach ($expectedSource in @(
   'portfolio-manager.md',
   'position-sizing-analyst.md',
   'performance-reviewer.md',
-  'us-close-korea-strategist.md'
+  'us-close-korea-strategist.md',
+  'find_foreign_streaks.ps1'
 )) {
   $validatorText = Get-Content -Path $validator -Raw -Encoding UTF8
   if ($validatorText -notmatch [regex]::Escape($expectedSource)) {

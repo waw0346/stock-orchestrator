@@ -221,6 +221,14 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\collect_flow_data.ps
 
 결과는 `picks\cache\flow_snapshot.json`에 저장됩니다. KRX/pykrx live 수급 조회는 이 환경에서 `empty_response`를 반환해 운영 판단 루프에서 제거했고, 기본 실행은 `disabled` 스냅샷만 남깁니다. 성공 항목이 있는 provider를 다시 연결할 때만 `market_data_snapshot.json`의 `flow` 필드에 병합합니다. 자세한 운영 절차는 `docs\flow_data_collector.md`를 확인하세요.
 
+장마감 후 외국인 연속 순매수 종목을 CSV 기반으로 선별하려면:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\find_foreign_streaks.ps1 -InputCsvPath picks\cache\foreign_flow_history.csv
+```
+
+결과는 `picks\cache\foreign_streak_candidates.json`에 저장됩니다. 기본 기준은 최신 거래일 기준 3거래일 연속 외국인 순매수이며, 자세한 입력 형식은 `docs\foreign_streak_scanner.md`를 확인하세요.
+
 Fiscal.ai는 한국장 외국인/기관 수급 대체 원천이 아니라 재무/공시/뉴스/가격 보강 provider로 사용합니다. API key와 MCP 연결 방식은 `docs\fiscal_ai_integration.md`를 확인하세요.
 
 Fiscal.ai 연결과 미국 회사 프로필 스냅샷을 점검하려면:

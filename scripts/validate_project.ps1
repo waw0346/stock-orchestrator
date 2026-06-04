@@ -631,6 +631,50 @@ if (Test-Path $flowSnapshot) {
 }
 
 Write-Output ''
+Write-Output '== Foreign streak scanner =='
+$foreignStreakPy = Join-Path $root 'scripts/find_foreign_streaks.py'
+$foreignStreakPs1 = Join-Path $root 'scripts/find_foreign_streaks.ps1'
+$foreignStreakDocs = Join-Path $root 'docs/foreign_streak_scanner.md'
+$foreignStreakSnapshot = Join-Path $root 'picks/cache/foreign_streak_candidates.json'
+
+foreach ($required in @($foreignStreakPy, $foreignStreakPs1, $foreignStreakDocs)) {
+  if (Test-Path $required) {
+    Write-Output ("OK   {0}" -f (Resolve-Path -Path $required -Relative))
+  } else {
+    Add-Issue -Level 'ERROR' -Area 'Foreign streak scanner' -Message ("Missing required foreign streak scanner file: {0}" -f $required)
+    Write-Output ("FAIL {0} - missing" -f $required)
+  }
+}
+
+if (Test-Path $foreignStreakDocs) {
+  $foreignStreakDocsText = Get-Content -Path $foreignStreakDocs -Raw -Encoding UTF8
+  foreach ($requiredText in @('foreign_streak_candidates.json', 'consecutive_foreign_buy_days', '3-day consecutive foreign net-buy')) {
+    if ($foreignStreakDocsText -notmatch [regex]::Escape($requiredText)) {
+      Add-Issue -Level 'ERROR' -Area 'Foreign streak scanner' -Message ("Foreign streak docs missing required text: {0}" -f $requiredText)
+      Write-Output ("FAIL foreign streak docs - missing {0}" -f $requiredText)
+    }
+  }
+}
+
+if (Test-Path $foreignStreakSnapshot) {
+  try {
+    $foreignStreakJson = Get-Content -Path $foreignStreakSnapshot -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($null -eq $foreignStreakJson.candidates) {
+      Add-Issue -Level 'ERROR' -Area 'Foreign streak scanner' -Message 'foreign_streak_candidates.json missing candidates'
+      Write-Output 'FAIL foreign streak candidates - missing candidates'
+    } else {
+      Write-Output 'OK   .\picks\cache\foreign_streak_candidates.json'
+    }
+  } catch {
+    Add-Issue -Level 'ERROR' -Area 'Foreign streak scanner' -Message ("Could not parse foreign streak candidates: {0}" -f $_.Exception.Message)
+    Write-Output 'FAIL foreign streak candidates - invalid JSON'
+  }
+} else {
+  Add-Issue -Level 'WARN' -Area 'Foreign streak scanner' -Message 'Missing operating foreign streak snapshot: picks/cache/foreign_streak_candidates.json'
+  Write-Output 'WARN foreign streak candidates - missing'
+}
+
+Write-Output ''
 Write-Output '== Fundamentals collector =='
 $fundamentalsPy = Join-Path $root 'scripts/collect_fundamentals.py'
 $fundamentalsPs1 = Join-Path $root 'scripts/collect_fundamentals.ps1'

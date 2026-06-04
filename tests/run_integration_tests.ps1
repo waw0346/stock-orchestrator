@@ -80,6 +80,7 @@ Assert-FileContains 'scripts/validate_project.ps1' @(
   'Market data crawler',
   'Fundamentals collector',
   'Flow data collector',
+  'Foreign streak scanner',
   'candidate_board.json',
   'Fiscal.ai integration'
 )
@@ -239,6 +240,55 @@ if ($null -eq $flowJson.items[0].foreign_net_buy_5d -or $null -eq $flowJson.item
 $flowMarketJson = Get-Content -Path $flowMarketOutput -Raw -Encoding UTF8 | ConvertFrom-Json
 if ($null -eq $flowMarketJson.items[0].flow.foreign_net_buy_5d) {
   throw 'Flow data collector did not merge flow into market snapshot'
+}
+
+$foreignFlowCsv = Join-Path $root 'picks/cache/foreign_flow_history.test.csv'
+$foreignStreakOutput = Join-Path $root 'picks/cache/foreign_streak_candidates.test.json'
+Remove-Item -Path $foreignFlowCsv -ErrorAction SilentlyContinue
+Remove-Item -Path $foreignStreakOutput -ErrorAction SilentlyContinue
+$foreignFlowRows = @(
+  'date,ticker,name,foreign_net_buy,institution_net_buy,close,volume',
+  '2026-06-01,005930,Samsung Electronics,12000000000,3000000000,340000,1000000',
+  '2026-06-02,005930,Samsung Electronics,15000000000,4000000000,350000,1200000',
+  '2026-06-03,005930,Samsung Electronics,18000000000,2000000000,355000,1100000',
+  '2026-06-01,000660,SK Hynix,8000000000,1000000000,2200000,500000',
+  '2026-06-02,000660,SK Hynix,-1000000000,2000000000,2250000,600000',
+  '2026-06-03,000660,SK Hynix,9000000000,1000000000,2294000,550000',
+  '2026-06-01,018260,Samsung SDS,7000000000,-1000000000,260000,400000',
+  '2026-06-02,018260,Samsung SDS,8000000000,1000000000,268000,420000',
+  '2026-06-03,018260,Samsung SDS,9000000000,2000000000,271000,450000'
+)
+$foreignFlowCsvText = [string]::Join([Environment]::NewLine, $foreignFlowRows)
+Set-Content -Path $foreignFlowCsv -Value $foreignFlowCsvText -Encoding UTF8
+
+Assert-FileContains 'docs/foreign_streak_scanner.md' @(
+  'foreign_streak_candidates.json',
+  'consecutive_foreign_buy_days',
+  '3-day consecutive foreign net-buy'
+)
+
+$foreignStreakScanner = Join-Path $root 'scripts/find_foreign_streaks.ps1'
+$foreignStreakRun = & $foreignStreakScanner -InputCsvPath $foreignFlowCsv -OutputPath $foreignStreakOutput -MinConsecutiveDays 3 -Top 2 2>&1
+$foreignStreakExitCode = if ($null -eq $LASTEXITCODE) { 0 } else { $LASTEXITCODE }
+if ($foreignStreakExitCode -ne 0) {
+  $foreignStreakText = $foreignStreakRun -join [Environment]::NewLine
+  throw "Foreign streak scanner failed with exit code $foreignStreakExitCode`n$foreignStreakText"
+}
+if (-not (Test-Path $foreignStreakOutput)) {
+  throw 'Foreign streak scanner did not create output'
+}
+$foreignStreakJson = Get-Content -Path $foreignStreakOutput -Raw -Encoding UTF8 | ConvertFrom-Json
+if (@($foreignStreakJson.candidates).Count -ne 2) {
+  throw 'Foreign streak scanner should keep the requested top 2 candidates'
+}
+if ($foreignStreakJson.candidates[0].ticker -ne '005930') {
+  throw 'Foreign streak scanner should rank highest cumulative foreign net buy first'
+}
+if ($foreignStreakJson.candidates.ticker -contains '000660') {
+  throw 'Foreign streak scanner should exclude tickers without a 3-day foreign buy streak'
+}
+if ($foreignStreakJson.candidates[0].consecutive_foreign_buy_days -ne 3) {
+  throw 'Foreign streak scanner should report consecutive foreign buy days'
 }
 
 $fundamentalsOutput = Join-Path $root 'picks/cache/fundamentals_snapshot.test.json'
