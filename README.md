@@ -223,6 +223,14 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\collect_flow_data.ps
 
 장마감 후 외국인 연속 순매수 종목을 CSV 기반으로 선별하려면:
 
+키움 REST API를 연결한 경우 먼저 외국인 순매수 상위 데이터를 수집합니다:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\collect_kiwoom_foreign_rank.ps1 -OutputCsvPath picks\cache\foreign_flow_history.csv
+```
+
+필요 환경변수는 `KIWOOM_APP_KEY`, `KIWOOM_APP_SECRET`입니다. 이미 발급된 접근토큰을 직접 쓸 때는 `KIWOOM_ACCESS_TOKEN`을 설정할 수 있습니다.
+
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\find_foreign_streaks.ps1 -InputCsvPath picks\cache\foreign_flow_history.csv
 ```
@@ -245,6 +253,14 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\run_candidate_board.
 ```
 
 결과는 `picks\cache\candidate_board.json`에 저장됩니다. `FOCUS`와 `WATCH`는 리서치 큐 상태이며 직접 매매 지시가 아닙니다. 자세한 구조는 `docs\candidate_board.md`를 확인하세요.
+
+장전/장중/장후 시황, 테마 확산, 급등락 리스크, 외국인·기관 흐름, 선물/ETF/환율 감시 슬롯을 한 화면으로 정리하려면:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\run_market_radar.ps1 -Mode intraday
+```
+
+결과는 `picks\cache\market_radar.json`에 저장됩니다. 이 레이더는 장기투자 리서치와 Obsidian 근거 분류를 위한 산출물이며 자동매매나 직접 매수/매도 신호가 아닙니다. 키움 API 승인 후에는 장중 현재가, 수급, KOSPI200 선물, 프로그램 매매 provider를 이 레이더의 입력으로 붙이는 방향이 적합합니다. 자세한 구조는 `docs\market_radar.md`를 확인하세요.
 
 ## 🚀 사용법
 

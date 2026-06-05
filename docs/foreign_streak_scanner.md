@@ -25,6 +25,47 @@ Optional columns:
 | `close` | Close price |
 | `volume` | Volume |
 
+## Kiwoom Provider
+
+`scripts/collect_kiwoom_foreign_rank.py` fills `foreign_flow_history.csv` from Kiwoom REST API foreign net-buy rank data.
+
+It uses Kiwoom domestic stock rank API `ka10034` (`외인기간별매매상위요청`) through `/api/dostk/rkinfo`.
+
+Required environment variables:
+
+| variable | meaning |
+|----------|---------|
+| `KIWOOM_APP_KEY` | Kiwoom REST API app key |
+| `KIWOOM_APP_SECRET` | Kiwoom REST API app secret |
+| `KIWOOM_ACCESS_TOKEN` | Optional pre-issued access token |
+| `KIWOOM_BASE_URL` | Optional base URL. Defaults to `https://api.kiwoom.com` |
+
+Run live collection:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\collect_kiwoom_foreign_rank.ps1 `
+  -OutputCsvPath picks\cache\foreign_flow_history.csv `
+  -SnapshotPath picks\cache\foreign_rank_snapshot.json `
+  -Top 20
+```
+
+Then run the streak scanner:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\find_foreign_streaks.ps1 `
+  -InputCsvPath picks\cache\foreign_flow_history.csv `
+  -OutputPath picks\cache\foreign_streak_candidates.json
+```
+
+Network-free verification:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\collect_kiwoom_foreign_rank.ps1 `
+  -OfflineSample `
+  -OutputCsvPath picks\cache\foreign_flow_history.kiwoom.test.csv `
+  -SnapshotPath picks\cache\foreign_rank_snapshot.kiwoom.test.json
+```
+
 ## Run
 
 ```powershell

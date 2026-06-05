@@ -127,7 +127,7 @@ $gitignoreFile = Join-Path $root '.gitignore'
 if (Test-Path $obsiAgent) {
   Write-Output ("OK   {0}" -f (Resolve-Path -Path $obsiAgent -Relative))
   $obsiText = Get-Content -Path $obsiAgent -Raw -Encoding UTF8
-  foreach ($requiredText in @('name: obsi', 'Obsidian', 'git', 'stock_log', '07_stock_analysis', '08_error_reviews', '09_decision_journal', '11_calendar', '_templates', '_moc')) {
+  foreach ($requiredText in @('name: obsi', 'Obsidian', 'git', 'stock_log', '07_stock_analysis', '08_error_reviews', '09_decision_journal', '11_calendar', '_templates', '_moc', 'evidence_type', 'report', 'artifact', 'analysis', 'news', 'research_fact', 'Dataview', 'Tasks', 'Templater', 'Smart Connections', 'Evidence Dashboard', 'Market Radar Template')) {
     if ($obsiText -notmatch [regex]::Escape($requiredText)) {
       Add-Issue -Level 'ERROR' -Area 'Obsidian record DB' -Message ("obsi agent missing required text: {0}" -f $requiredText)
       Write-Output ("FAIL obsi agent - missing {0}" -f $requiredText)
@@ -157,10 +157,14 @@ if (Test-Path $obsidianIndex) {
 
 foreach ($relative in @(
   'obsidian/stock_log/_moc/Obsidian Operating System Design.md',
+  'obsidian/stock_log/_moc/Evidence Dashboard.md',
+  'obsidian/stock_log/_moc/Market Radar MOC.md',
   'obsidian/stock_log/_moc/Stock Analysis MOC.md',
   'obsidian/stock_log/_templates/Daily Log Template.md',
   'obsidian/stock_log/_templates/Execution Log Template.md',
   'obsidian/stock_log/_templates/Market News Template.md',
+  'obsidian/stock_log/_templates/Evidence Record Template.md',
+  'obsidian/stock_log/_templates/Market Radar Template.md',
   'obsidian/stock_log/_templates/Candidate Board Template.md',
   'obsidian/stock_log/_templates/Stock Analysis Template.md',
   'obsidian/stock_log/_templates/Error Review Template.md',
@@ -634,10 +638,12 @@ Write-Output ''
 Write-Output '== Foreign streak scanner =='
 $foreignStreakPy = Join-Path $root 'scripts/find_foreign_streaks.py'
 $foreignStreakPs1 = Join-Path $root 'scripts/find_foreign_streaks.ps1'
+$kiwoomForeignRankPy = Join-Path $root 'scripts/collect_kiwoom_foreign_rank.py'
+$kiwoomForeignRankPs1 = Join-Path $root 'scripts/collect_kiwoom_foreign_rank.ps1'
 $foreignStreakDocs = Join-Path $root 'docs/foreign_streak_scanner.md'
 $foreignStreakSnapshot = Join-Path $root 'picks/cache/foreign_streak_candidates.json'
 
-foreach ($required in @($foreignStreakPy, $foreignStreakPs1, $foreignStreakDocs)) {
+foreach ($required in @($foreignStreakPy, $foreignStreakPs1, $kiwoomForeignRankPy, $kiwoomForeignRankPs1, $foreignStreakDocs)) {
   if (Test-Path $required) {
     Write-Output ("OK   {0}" -f (Resolve-Path -Path $required -Relative))
   } else {
@@ -648,7 +654,7 @@ foreach ($required in @($foreignStreakPy, $foreignStreakPs1, $foreignStreakDocs)
 
 if (Test-Path $foreignStreakDocs) {
   $foreignStreakDocsText = Get-Content -Path $foreignStreakDocs -Raw -Encoding UTF8
-  foreach ($requiredText in @('foreign_streak_candidates.json', 'consecutive_foreign_buy_days', '3-day consecutive foreign net-buy')) {
+  foreach ($requiredText in @('foreign_streak_candidates.json', 'consecutive_foreign_buy_days', '3-day consecutive foreign net-buy', 'collect_kiwoom_foreign_rank.ps1', 'KIWOOM_APP_KEY', 'ka10034')) {
     if ($foreignStreakDocsText -notmatch [regex]::Escape($requiredText)) {
       Add-Issue -Level 'ERROR' -Area 'Foreign streak scanner' -Message ("Foreign streak docs missing required text: {0}" -f $requiredText)
       Write-Output ("FAIL foreign streak docs - missing {0}" -f $requiredText)
@@ -784,6 +790,50 @@ if (Test-Path $candidateBoardSnapshot) {
 } else {
   Add-Issue -Level 'WARN' -Area 'Candidate board' -Message 'Missing operating candidate board: picks/cache/candidate_board.json'
   Write-Output 'WARN candidate board - missing'
+}
+
+Write-Output ''
+Write-Output '== Market radar =='
+$marketRadarPy = Join-Path $root 'scripts/run_market_radar.py'
+$marketRadarPs1 = Join-Path $root 'scripts/run_market_radar.ps1'
+$marketRadarDocs = Join-Path $root 'docs/market_radar.md'
+$marketRadarSnapshot = Join-Path $root 'picks/cache/market_radar.json'
+
+foreach ($required in @($marketRadarPy, $marketRadarPs1, $marketRadarDocs)) {
+  if (Test-Path $required) {
+    Write-Output ("OK   {0}" -f (Resolve-Path -Path $required -Relative))
+  } else {
+    Add-Issue -Level 'ERROR' -Area 'Market radar' -Message ("Missing required market radar file: {0}" -f $required)
+    Write-Output ("FAIL {0} - missing" -f $required)
+  }
+}
+
+if (Test-Path $marketRadarDocs) {
+  $marketRadarDocsText = Get-Content -Path $marketRadarDocs -Raw -Encoding UTF8
+  foreach ($requiredText in @('market_radar.json', 'preopen', 'intraday', 'after_close', 'theme_flows', 'futures', 'etf', 'fx_rates', 'big_money', 'evidence_map')) {
+    if ($marketRadarDocsText -notmatch [regex]::Escape($requiredText)) {
+      Add-Issue -Level 'ERROR' -Area 'Market radar' -Message ("Market radar docs missing required text: {0}" -f $requiredText)
+      Write-Output ("FAIL market radar docs - missing {0}" -f $requiredText)
+    }
+  }
+}
+
+if (Test-Path $marketRadarSnapshot) {
+  try {
+    $marketRadarJson = Get-Content -Path $marketRadarSnapshot -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($null -eq $marketRadarJson.theme_flows -or $null -eq $marketRadarJson.market_context) {
+      Add-Issue -Level 'ERROR' -Area 'Market radar' -Message 'market_radar.json missing theme_flows or market_context'
+      Write-Output 'FAIL market radar - missing theme_flows or market_context'
+    } else {
+      Write-Output 'OK   .\picks\cache\market_radar.json'
+    }
+  } catch {
+    Add-Issue -Level 'ERROR' -Area 'Market radar' -Message ("Could not parse market radar: {0}" -f $_.Exception.Message)
+    Write-Output 'FAIL market radar - invalid JSON'
+  }
+} else {
+  Add-Issue -Level 'WARN' -Area 'Market radar' -Message 'Missing operating market radar: picks/cache/market_radar.json'
+  Write-Output 'WARN market radar - missing'
 }
 
 Write-Output ''

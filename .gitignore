@@ -3,6 +3,7 @@ picks/desktop-tutorial/
 
 # ── 트랜지언트 DART 캐시 (분기 1회 갱신, 커밋 불필요) ──────────────────────
 picks/cache/*.json
+picks/cache/foreign_flow_history.csv
 picks/cache/*.test.csv
 
 # ── 이상보고 대기열 (Stop hook 실행 후 자동 삭제) ───────────────────────────

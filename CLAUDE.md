@@ -290,6 +290,19 @@ review_history: []
 사용자: "이번달 픽 결산", "월간 추적", "monthly review"
 → `@monthly-tracker`에게 위임
 
+### 테마 및 특징주 추적
+사용자: "오늘의 테마", "테마 분석", "주도 테마", "theme tracking"
+→ `@theme-tracker`에게 위임
+→ 기준 파일: `picks/cache/candidate_board.json`, `picks/cache/fiscal_ai_news.json`
+→ 결과는 `picks/theme_report.md`에 주도 테마 및 후속주 아이디어로 기록
+
+### 장전/장중/장후 시장 레이더
+사용자: "장전 시황", "장중 시황", "장후 시황", "시장 레이더", "테마 흐름", "큰손 흐름", "선물/ETF/환율 흐름"
+→ `scripts/run_market_radar.ps1 -Mode preopen|intraday|after_close`로 `picks/cache/market_radar.json` 생성
+→ 기준 파일: `picks/cache/market_data_snapshot.json`, `picks/cache/candidate_board.json`, `picks/cache/flow_snapshot.json`, `picks/cache/fiscal_ai_investment_news.json`
+→ 키움 API 승인 후 장중 현재가, 외국인/기관 수급, KOSPI200 선물, 프로그램 매매 provider를 입력으로 추가
+→ 산출물은 자동매매/직접 매수·매도 신호가 아니라 장기투자 리서치 레이더이며, `obsi`는 `artifact`, `research_fact`, `news`, `analysis`, `report`로 근거를 분류 기록
+
 ### 단일 픽 재점검
 사용자: "○○ 픽 어떻게 됐어?"
 → 해당 픽 파일 읽고 weekly-tracker에게 단일 종목 재점검 위임

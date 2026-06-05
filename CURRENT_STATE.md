@@ -1,6 +1,6 @@
 # Current Project State
 
-기준일: 2026-06-04
+기준일: 2026-06-05
 
 이 파일은 현재 운영 기준을 빠르게 확인하기 위한 상태표입니다. 혼동이 생기면 이 파일과 `README.md`, `CLAUDE.md`를 우선합니다.
 
@@ -41,6 +41,7 @@
 - `flow-momentum-tracker`
 - `entry-exit-timing-strategist`
 - `us-close-korea-strategist`
+- `theme-tracker`
 
 운영 통제:
 - `market-regime-analyst`
@@ -86,6 +87,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\review_changes.ps1
 powershell -ExecutionPolicy Bypass -File .\tests\run_validation_tests.ps1
 powershell -ExecutionPolicy Bypass -File .\tests\run_change_review_tests.ps1
 powershell -ExecutionPolicy Bypass -File .\tests\run_integration_tests.ps1
+powershell -ExecutionPolicy Bypass -File .\tests\run_market_radar_tests.ps1
 powershell -ExecutionPolicy Bypass -File .\tests\run_paper_trading_tests.ps1
 
 # 밸류에이션 보강 포함 펀더멘탈 수집
@@ -96,6 +98,9 @@ powershell -ExecutionPolicy Bypass -File .\scripts\collect_fundamentals.ps1 -Ski
 
 # 장마감 후 외국인 연속 순매수 후보 스캔
 powershell -ExecutionPolicy Bypass -File .\scripts\find_foreign_streaks.ps1 -InputCsvPath .\picks\cache\foreign_flow_history.csv
+
+# 장전/장중/장후 장기투자 시황 레이더
+powershell -ExecutionPolicy Bypass -File .\scripts\run_market_radar.ps1 -Mode intraday
 ```
 
 ## Known Operational Note

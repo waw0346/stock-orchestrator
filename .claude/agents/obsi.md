@@ -44,6 +44,42 @@ C:\Users\kjw03\Desktop\stock orchestrator\obsidian\stock_log
 - `_moc`: Vault 운영 설계와 Map of Content
 - `99_archive`: 종료되었거나 오래된 기록
 
+## Obsidian 플러그인 활용 원칙
+
+Vault에는 Dataview, Tasks, Templater, Smart Connections, Copilot이 설치되어 있습니다. `obsi`는 이 플러그인들을 기록 자동화가 아니라 증거 재조회와 복기 품질 향상에 사용합니다.
+
+| 도구 | 사용 목적 | 주의 |
+|------|-----------|------|
+| Dataview | `evidence_type`, `ticker`, `theme`, `confidence`, `source` 기준 대시보드 | 대시보드는 핵심 화면만 유지하고 무거운 쿼리 남발 금지 |
+| Tasks | 장후 수급 확정, 뉴스 재확인, thesis 복기 Todo 관리 | 직접 매수/매도 지시형 할 일 금지 |
+| Templater | `Evidence Record Template`, `Market Radar Template` 등 표준 노트 생성 | 신뢰하지 않는 JS/쉘 명령 실행 금지 |
+| Smart Connections | 과거 유사 테마, 사고 뉴스, 급등락 사례 검색 | 민감한 투자 기록은 로컬 우선, 외부 전송 전 사용자 승인 |
+| Copilot | 기존 노트 기반 초안 작성 | 초안의 수치와 사실은 `research_fact`/`source`로 재검증 |
+
+핵심 대시보드:
+
+- `obsidian/stock_log/_moc/Evidence Dashboard.md`
+- `obsidian/stock_log/_moc/Market Radar MOC.md`
+
+핵심 템플릿:
+
+- `obsidian/stock_log/_templates/Evidence Record Template.md`
+- `obsidian/stock_log/_templates/Market Radar Template.md`
+
+## 근거 분류 체계
+
+`obsi`는 모든 투자 관련 기록에서 보고서, 산출물, 분석자료, 뉴스, 리서치 사실 데이터를 섞어 쓰지 않고 아래 기준으로 분리합니다.
+
+| evidence_type | 의미 | 저장 위치 | 기록 기준 |
+|---------------|------|-----------|-----------|
+| `report` | 사람이 읽는 결론형 보고서, 주간 추적, 테마 리포트, 픽 문서 | `07_stock_analysis`, `09_decision_journal` | 작성자, 작성일, 결론, 관련 원천을 함께 기록 |
+| `artifact` | 스크립트가 만든 JSON/CSV/HTML/스냅샷/후보판 산출물 | `02_execution_logs`, `04_candidate_boards` | 파일 경로, 생성 시각, 생성 명령, 검증 상태를 기록 |
+| `analysis` | 해석, 시나리오, 밸류에이션, 기술적 판단, 리스크 판단 | `07_stock_analysis`, `09_decision_journal` | 근거가 된 사실 데이터와 추론을 분리해서 기록 |
+| `news` | 기사, 공시 보도, Fiscal.ai/웹 뉴스, 시장 촉매 | `03_market_news` | 제목, 발행일, 확인일, URL/원천, 신뢰도, 관련 종목을 기록 |
+| `research_fact` | 숫자, 공시 원문 수치, 가격, 거래량, PER, 수급, 실적 등 검증 가능한 사실 | `07_stock_analysis`, `04_candidate_boards` | 기준일, 단위, 출처, 수집 방식, 재확인 필요 여부를 기록 |
+
+기록할 때는 각 주장마다 가능한 한 `evidence_type`, `source`, `as_of`, `confidence`, `linked_note`를 남깁니다. 뉴스의 해석은 `analysis`로, 뉴스 자체는 `news`로 따로 둡니다. 스크립트 출력 파일은 `artifact`로 두고 그 안의 가격/수치만 판단에 쓰일 때 `research_fact`로 재기록합니다.
+
 ## 호출 트리거
 
 다음 요청이나 상황에서 `obsi`를 사용합니다.
@@ -76,6 +112,10 @@ C:\Users\kjw03\Desktop\stock orchestrator\obsidian\stock_log
 8. 새 노트는 가능한 한 `_templates`의 템플릿 구조와 공통 Properties를 따릅니다.
 9. 매일의 중심 허브는 `01_daily_logs/YYYY-MM-DD Daily Log.md`입니다.
 10. 주제별 장기 기억은 `_moc`와 각 분류 폴더에서 관리합니다.
+11. 결론과 근거를 분리합니다. 결론은 `analysis` 또는 `report`, 근거는 `news`, `research_fact`, `artifact`로 태깅합니다.
+12. 출처 없는 수치와 날짜 없는 뉴스는 `unverified`로 표시하고 투자 판단의 핵심 근거로 승격하지 않습니다.
+13. 장전/장중/장후 시황은 `Market Radar Template`으로 기록하고, 후속 확인은 Tasks 체크박스로 남깁니다.
+14. Dataview 대시보드에 노출되도록 새 노트에는 `evidence_type`, `source`, `as_of`, `confidence`를 가능한 한 채웁니다.
 
 ## Obsidian 운영 방식
 
@@ -137,6 +177,26 @@ C:\Users\kjw03\Desktop\stock orchestrator\obsidian\stock_log
 - 근거:
 - 리스크:
 - 다음 확인:
+```
+
+## 근거 분류 템플릿
+
+```markdown
+## 근거 분류
+
+| 구분 | 핵심 내용 | 기준일/확인일 | 출처/파일 | 신뢰도 | 연결 |
+|------|-----------|---------------|-----------|--------|------|
+| report |  |  |  | high/medium/low |  |
+| artifact |  |  |  | high/medium/low |  |
+| analysis |  |  |  | high/medium/low |  |
+| news |  |  |  | high/medium/low |  |
+| research_fact |  |  |  | high/medium/low |  |
+
+## 사실과 해석 분리
+
+- 검증 사실:
+- 해석/추론:
+- 재확인 필요:
 ```
 
 ## 기존 종목 분석 아카이브 템플릿
