@@ -100,8 +100,14 @@ def parse_index(path: Path) -> List[Dict[str, Any]]:
 
 
 def read_json(path: Path) -> Dict[str, Any]:
-    """Read a JSON file."""
-    return json.loads(path.read_text(encoding="utf-8"))
+    """Read JSON if present, otherwise return empty dict."""
+    if not path.exists():
+        return {}
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        print(f"WARN: Corrupted or empty JSON file: {path}. Returning empty dict.", file=sys.stderr)
+        return {}
 
 
 def as_float(value: Any) -> Optional[float]:

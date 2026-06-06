@@ -187,6 +187,32 @@ foreach ($relative in @(
 }
 
 Write-Output ''
+Write-Output '== Metacognitive self-diagnosis agent =='
+$metacognitiveAgent = Join-Path $root '.claude/agents/metacognitive-analyst.md'
+$metacognitiveMoc = Join-Path $root 'obsidian/stock_log/_moc/Metacognitive System Design.md'
+
+if (Test-Path $metacognitiveAgent) {
+  Write-Output ("OK   {0}" -f (Resolve-Path -Path $metacognitiveAgent -Relative))
+  $metaText = Get-Content -Path $metacognitiveAgent -Raw -Encoding UTF8
+  foreach ($requiredText in @('name: metacognitive-analyst', 'metacognitive-analyst', 'health_score', 'health_grade', 'critical_issues', 'refactoring_proposed')) {
+    if ($metaText -notmatch [regex]::Escape($requiredText)) {
+      Add-Issue -Level 'ERROR' -Area 'Metacognitive analyst' -Message ("metacognitive analyst agent missing required text: {0}" -f $requiredText)
+      Write-Output ("FAIL metacognitive analyst agent - missing {0}" -f $requiredText)
+    }
+  }
+} else {
+  Add-Issue -Level 'ERROR' -Area 'Metacognitive analyst' -Message 'Missing .claude/agents/metacognitive-analyst.md'
+  Write-Output 'FAIL .claude/agents/metacognitive-analyst.md - missing'
+}
+
+if (Test-Path $metacognitiveMoc) {
+  Write-Output 'OK   Metacognitive System Design MOC'
+} else {
+  Add-Issue -Level 'WARN' -Area 'Metacognitive analyst' -Message 'Missing local Obsidian Metacognitive System Design MOC'
+  Write-Output 'WARN Metacognitive System Design MOC - missing'
+}
+
+Write-Output ''
 Write-Output '== Pick data quality =='
 $pickDir = Join-Path $root 'picks'
 $indexStatusByTicker = @{}

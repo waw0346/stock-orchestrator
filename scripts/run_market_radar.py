@@ -67,7 +67,11 @@ def read_json(path: Path) -> Dict[str, Any]:
     """Read JSON if present, otherwise return an empty object."""
     if not path.exists():
         return {}
-    return json.loads(path.read_text(encoding="utf-8-sig"))
+    try:
+        return json.loads(path.read_text(encoding="utf-8-sig"))
+    except json.JSONDecodeError:
+        print(f"WARN: Corrupted or empty JSON file: {path}. Returning empty dict.", file=sys.stderr)
+        return {}
 
 
 def write_json(path: Path, data: Any) -> None:

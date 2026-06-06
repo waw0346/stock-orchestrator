@@ -1,0 +1,19 @@
+[project]
+name = "stock-orchestrator"
+version = "1.0.0"
+description = "Korean stock research orchestrator"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "pandas>=2.0.0",
+    "pykrx>=1.2.0",
+    "requests>=2.30.0",
+    "pyyaml>=6.0.0",
+    "pydantic>=2.0.0",
+    "numpy>=1.22.0",
+    "matplotlib>=3.5.0"
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

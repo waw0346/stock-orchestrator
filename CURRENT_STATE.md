@@ -43,11 +43,12 @@
 - `us-close-korea-strategist`
 - `theme-tracker`
 
-운영 통제:
+운영 통제 및 메타인지:
 - `market-regime-analyst`
 - `portfolio-manager`
 - `position-sizing-analyst`
 - `performance-reviewer`
+- `metacognitive-analyst`
 
 스크리닝:
 - `preopen-foreign-scanner`

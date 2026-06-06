@@ -40,6 +40,7 @@
 | "장전 외국인" / "외국인 순매수 확인" / "장전 픽업" / "8시30분 수급" / "preopen foreign" | preopen-foreign-scanner 위임 | preopen |
 | "현재 픽 목록" | picks/INDEX.md 읽어서 표 출력 | 없음 |
 | "오늘 시세 ○○" | WebSearch 직접 (에이전트 불필요) | 없음 |
+| "구조 점검" / "자가 진단" / "메타인지" / "metacognitive" | metacognitive-analyst 위임 | metacognitive |
 
 ---
 
