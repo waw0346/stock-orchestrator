@@ -3,6 +3,13 @@
     "playmcp": {
       "type": "http",
       "url": "https://playmcp.kakao.com/mcp"
+    },
+    "korean-dart-mcp": {
+      "command": "npx",
+      "args": ["-y", "korean-dart-mcp-server"],
+      "env": {
+        "OPENDART_API_KEY": "OPENDART_API_KEY_VALUE"
+      }
     }
   }
 }

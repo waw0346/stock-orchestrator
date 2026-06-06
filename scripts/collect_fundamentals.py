@@ -24,6 +24,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 from xml.etree import ElementTree
+from pydantic import BaseModel, Field, field_validator
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -38,6 +39,58 @@ KST = timezone(timedelta(hours=9))
 FUNDAMENTAL_FIELDS = ("BPS", "PER", "PBR", "EPS", "DIV", "DPS")
 OPENDART_BASE_URL = "https://opendart.fss.or.kr/api"
 OPENDART_INDEX_CLASSES = ("M210000", "M220000", "M230000", "M240000")
+
+
+class FundamentalItem(BaseModel):
+    ticker: str = Field(..., min_length=6, max_length=6, pattern=r"^\d{6}$")
+    name: str
+    date: str
+    bps: Optional[float] = None
+    per: Optional[float] = None
+    pbr: Optional[float] = None
+    eps: Optional[float] = None
+    div: Optional[float] = None
+    dps: Optional[float] = None
+    valuation_fields_available: bool = False
+    ok: bool = True
+    source: str
+    error: Optional[str] = None
+    errors: Optional[List[str]] = None
+    financial_indicators: Optional[Dict[str, Optional[float]]] = None
+    account_values: Optional[Dict[str, Optional[int]]] = None
+    gate_metrics: Optional[Dict[str, Optional[float]]] = None
+    missing_fields: Optional[List[str]] = None
+    enrichment_sources: Optional[List[str]] = None
+    note: Optional[str] = None
+    corp_code: Optional[str] = None
+    corp_name: Optional[str] = None
+    business_year: Optional[str] = None
+    report_code: Optional[str] = None
+
+    @field_validator("per", "pbr")
+    @classmethod
+    def check_non_negative(cls, v: Optional[float]) -> Optional[float]:
+        if v is not None and v < 0:
+            return None
+        return v
+
+
+class EnrichmentMeta(BaseModel):
+    enabled: bool
+    google_finance: Optional[Dict[str, Any]] = None
+    data_go_kr: Optional[Dict[str, Any]] = None
+
+
+class FundamentalsSnapshot(BaseModel):
+    generated_at: str
+    date: str
+    market: str
+    mode: str
+    provider: str
+    source: str
+    fields: List[str]
+    enrichment: EnrichmentMeta
+    items: List[FundamentalItem]
 
 
 def configure_stdio() -> None:
@@ -661,7 +714,7 @@ def collect(args: argparse.Namespace, enrich: bool = True) -> Dict[str, Any]:
 
         items = enrich_items(items, google_data, datagokr_data)
 
-    return {
+    raw_snapshot = {
         "generated_at": now_kst().isoformat(timespec="seconds"),
         "date": args.date,
         "market": args.market,
@@ -672,6 +725,13 @@ def collect(args: argparse.Namespace, enrich: bool = True) -> Dict[str, Any]:
         "enrichment": enrichment_meta,
         "items": items,
     }
+
+    try:
+        validated = FundamentalsSnapshot.model_validate(raw_snapshot)
+        return validated.model_dump()
+    except Exception as exc:
+        print(f"Pydantic validation error: {exc}", file=sys.stderr)
+        raise RuntimeError(f"Fundamentals snapshot validation failed: {exc}") from exc
 
 
 def write_json(path: Path, data: Any) -> None:
