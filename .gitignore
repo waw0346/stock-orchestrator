@@ -26,6 +26,7 @@ picks/*.test.csv
 picks/paper_price_snapshot.target.test.json
 
 # ── Python 캐시 및 컴파일 파일 ──────────────────────────────────────────────
+.venv/
 __pycache__/
 *.py[cod]
 *$py.class
