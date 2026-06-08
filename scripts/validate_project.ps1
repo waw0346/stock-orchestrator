@@ -592,6 +592,81 @@ if (Test-Path $paperRules) {
 }
 
 Write-Output ''
+Write-Output '== Paper trading / INDEX.md sync =='
+$paperStateFile = Join-Path $root 'picks/paper_trading_state.json'
+if ((Test-Path $paperStateFile) -and (Test-Path $indexFile)) {
+  try {
+    $paperState = Get-Content -Path $paperStateFile -Raw -Encoding UTF8 | ConvertFrom-Json
+
+    # Collect tickers currently held in paper trading
+    $paperTickers = @{}
+    foreach ($pos in $paperState.positions) {
+      $paperTickers[$pos.ticker] = $pos.avg_price
+    }
+
+    # Collect active/watch tickers from INDEX.md
+    $indexActiveTickers = @{}
+    $indexLines2 = Get-Content -Path $indexFile -Encoding UTF8
+    $inTracked = $false
+    foreach ($line in $indexLines2) {
+      if ($line -match '^##\s+Tracked') { $inTracked = $true; continue }
+      if ($inTracked -and $line -match '^##\s+') { $inTracked = $false; continue }
+      if ($inTracked -and $line -match '^\|\s*(20\d{2}-\d{2}-\d{2})\s*\|\s*([0-9]{6})\s*\|') {
+        $cols = $line -split '\|'
+        if ($cols.Count -ge 10) {
+          $t = $cols[2].Trim()
+          $s = Normalize-PickStatus $cols[9].Trim()
+          if ($s -eq 'active' -and $t) {
+            # Extract entry_price_low from range string (first number)
+            $entryRaw = $cols[6].Trim()
+            $entryMatch = [regex]::Match($entryRaw, '[\d,]+')
+            $entryNum = 0
+            if ($entryMatch.Success) {
+              [void][int]::TryParse(($entryMatch.Value -replace ',', ''), [ref]$entryNum)
+            }
+            $indexActiveTickers[$t] = $entryNum
+          }
+        }
+      }
+    }
+
+    # Check: paper positions whose avg_price deviates >50% from INDEX entry (likely stale flow-momentum position)
+    foreach ($ticker in $paperTickers.Keys) {
+      $avgPrice = $paperTickers[$ticker]
+      if ($indexActiveTickers.ContainsKey($ticker)) {
+        $indexEntry = $indexActiveTickers[$ticker]
+        if ($indexEntry -gt 0 -and $avgPrice -gt 0) {
+          $deviation = [Math]::Abs($avgPrice - $indexEntry) / $indexEntry * 100.0
+          if ($deviation -gt 50) {
+            Add-Issue -Level 'WARN' -Area 'Paper trading / INDEX.md sync' -Message ("avg_price mismatch for {0}: paper={1} vs INDEX entry~{2} (deviation {3:F0}%)" -f $ticker, $avgPrice, $indexEntry, $deviation)
+            Write-Output ("WARN {0} - avg_price deviation {1:F0}% (paper={2}, INDEX~{3})" -f $ticker, $deviation, $avgPrice, $indexEntry)
+          } else {
+            Write-Output ("OK   {0} paper avg_price within tolerance of INDEX entry" -f $ticker)
+          }
+        }
+      }
+    }
+
+    # Check: active INDEX picks with no corresponding paper position
+    foreach ($ticker in $indexActiveTickers.Keys) {
+      if (-not $paperTickers.ContainsKey($ticker)) {
+        Add-Issue -Level 'WARN' -Area 'Paper trading / INDEX.md sync' -Message ("Active INDEX pick {0} has no paper trading position" -f $ticker)
+        Write-Output ("WARN {0} - active in INDEX but no paper position" -f $ticker)
+      }
+    }
+
+    if ($paperTickers.Count -eq 0 -and $indexActiveTickers.Count -eq 0) {
+      Write-Output 'OK   paper trading / INDEX.md sync (no active positions)'
+    }
+  } catch {
+    Add-Issue -Level 'WARN' -Area 'Paper trading / INDEX.md sync' -Message ("Could not compare paper trading state with INDEX.md: {0}" -f $_.Exception.Message)
+    Write-Output ("WARN paper trading / INDEX.md sync - {0}" -f $_.Exception.Message)
+  }
+} else {
+  Write-Output 'SKIP paper trading / INDEX.md sync - missing paper_trading_state.json or INDEX.md'
+}
+
+Write-Output ''
 Write-Output '== Market data crawler =='
 $marketCrawlerPy = Join-Path $root 'scripts/collect_market_data.py'
 $marketCrawlerPs1 = Join-Path $root 'scripts/collect_market_data.ps1'
@@ -704,6 +779,94 @@ if (Test-Path $foreignStreakSnapshot) {
 } else {
   Add-Issue -Level 'WARN' -Area 'Foreign streak scanner' -Message 'Missing operating foreign streak snapshot: picks/cache/foreign_streak_candidates.json'
   Write-Output 'WARN foreign streak candidates - missing'
+}
+
+Write-Output ''
+Write-Output '== Flow streak scanner =='
+$flowStreakPy = Join-Path $root 'scripts/run_flow_analysis.py'
+$flowStreakPs1 = Join-Path $root 'scripts/run_flow_analysis.ps1'
+$flowStreakDocs = Join-Path $root 'docs/flow_streak_scanner.md'
+$flowStreakSnapshot = Join-Path $root 'picks/cache/flow_streak_candidates.json'
+
+foreach ($required in @($flowStreakPy, $flowStreakPs1, $flowStreakDocs)) {
+  if (Test-Path $required) {
+    Write-Output ("OK   {0}" -f (Resolve-Path -Path $required -Relative))
+  } else {
+    Add-Issue -Level 'ERROR' -Area 'Flow streak scanner' -Message ("Missing required flow streak scanner file: {0}" -f $required)
+    Write-Output ("FAIL {0} - missing" -f $required)
+  }
+}
+
+if (Test-Path $flowStreakDocs) {
+  $flowStreakDocsText = Get-Content -Path $flowStreakDocs -Raw -Encoding UTF8
+  foreach ($requiredText in @('flow_streak_candidates.json', 'consecutive_days', '3-day consecutive', 'run_flow_analysis.ps1', 'KIWOOM_APP_KEY', 'ka10044')) {
+    if ($flowStreakDocsText -notmatch [regex]::Escape($requiredText)) {
+      Add-Issue -Level 'ERROR' -Area 'Flow streak scanner' -Message ("Flow streak docs missing required text: {0}" -f $requiredText)
+      Write-Output ("FAIL flow streak docs - missing {0}" -f $requiredText)
+    }
+  }
+}
+
+if (Test-Path $flowStreakSnapshot) {
+  try {
+    $flowStreakJson = Get-Content -Path $flowStreakSnapshot -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($null -eq $flowStreakJson.foreign_buy_candidates -or $null -eq $flowStreakJson.pension_buy_candidates) {
+      Add-Issue -Level 'ERROR' -Area 'Flow streak scanner' -Message 'flow_streak_candidates.json missing candidates'
+      Write-Output 'FAIL flow streak candidates - missing candidates'
+    } else {
+      Write-Output 'OK   .\picks\cache\flow_streak_candidates.json'
+    }
+  } catch {
+    Add-Issue -Level 'ERROR' -Area 'Flow streak scanner' -Message ("Could not parse flow streak candidates: {0}" -f $_.Exception.Message)
+    Write-Output 'FAIL flow streak candidates - invalid JSON'
+  }
+} else {
+  Add-Issue -Level 'WARN' -Area 'Flow streak scanner' -Message 'Missing operating flow streak snapshot: picks/cache/flow_streak_candidates.json'
+  Write-Output 'WARN flow streak candidates - missing'
+}
+
+Write-Output ''
+Write-Output '== Flow comparison pipeline =='
+$flowCompPy = Join-Path $root 'scripts/run_flow_comparison.py'
+$flowCompPs1 = Join-Path $root 'scripts/run_flow_comparison.ps1'
+$flowCompDocs = Join-Path $root 'docs/flow_comparison.md'
+$flowCompLatest = Join-Path $root 'picks/cache/flow_comparison_latest.json'
+
+foreach ($required in @($flowCompPy, $flowCompPs1, $flowCompDocs)) {
+  if (Test-Path $required) {
+    Write-Output ("OK   {0}" -f (Resolve-Path -Path $required -Relative))
+  } else {
+    Add-Issue -Level 'ERROR' -Area 'Flow comparison pipeline' -Message ("Missing required flow comparison file: {0}" -f $required)
+    Write-Output ("FAIL {0} - missing" -f $required)
+  }
+}
+
+if (Test-Path $flowCompDocs) {
+  $flowCompDocsText = Get-Content -Path $flowCompDocs -Raw -Encoding UTF8
+  foreach ($requiredText in @('flow_comparison_latest.json', 'divergence', 'KODEX', 'TIGER', 'run_flow_comparison.ps1')) {
+    if ($flowCompDocsText -notmatch [regex]::Escape($requiredText)) {
+      Add-Issue -Level 'ERROR' -Area 'Flow comparison pipeline' -Message ("Flow comparison docs missing required text: {0}" -f $requiredText)
+      Write-Output ("FAIL flow comparison docs - missing {0}" -f $requiredText)
+    }
+  }
+}
+
+if (Test-Path $flowCompLatest) {
+  try {
+    $flowCompJson = Get-Content -Path $flowCompLatest -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($null -eq $flowCompJson.etfs -or $null -eq $flowCompJson.stocks) {
+      Add-Issue -Level 'ERROR' -Area 'Flow comparison pipeline' -Message 'flow_comparison_latest.json missing etfs or stocks'
+      Write-Output 'FAIL flow comparison latest - missing etfs or stocks'
+    } else {
+      Write-Output 'OK   .\picks\cache\flow_comparison_latest.json'
+    }
+  } catch {
+    Add-Issue -Level 'ERROR' -Area 'Flow comparison pipeline' -Message ("Could not parse flow comparison latest: {0}" -f $_.Exception.Message)
+    Write-Output 'FAIL flow comparison latest - invalid JSON'
+  }
+} else {
+  Add-Issue -Level 'WARN' -Area 'Flow comparison pipeline' -Message 'Missing operating flow comparison latest: picks/cache/flow_comparison_latest.json'
+  Write-Output 'WARN flow comparison latest - missing'
 }
 
 Write-Output ''
@@ -910,6 +1073,103 @@ if (Test-Path $fiscalAiSnapshot) {
 } else {
   Add-Issue -Level 'WARN' -Area 'Fiscal.ai integration' -Message 'Missing Fiscal.ai snapshot: picks/cache/fiscal_ai_snapshot.json'
   Write-Output 'WARN fiscal.ai snapshot - missing'
+}
+
+Write-Output ''
+Write-Output '== Screener Parameter Auto-Tuner =='
+$autoTunerPy = Join-Path $root 'scripts/optimize_screener_rules.py'
+$autoTunerPs1 = Join-Path $root 'scripts/optimize_screener_rules.ps1'
+$autoTunerLog = Join-Path $root 'obsidian/stock_log/10_strategy_playbooks/Dynamic Rules Log.md'
+$autoTunerConfig = Join-Path $root 'picks/cache/dynamic_rules_config.json'
+
+foreach ($required in @($autoTunerPy, $autoTunerPs1)) {
+  if (Test-Path $required) {
+    Write-Output ("OK   {0}" -f (Resolve-Path -Path $required -Relative))
+  } else {
+    Add-Issue -Level 'ERROR' -Area 'Screener parameter auto-tuner' -Message ("Missing required auto-tuner file: {0}" -f $required)
+    Write-Output ("FAIL {0} - missing" -f $required)
+  }
+}
+
+if (Test-Path $autoTunerLog) {
+  Write-Output ("OK   {0}" -f (Resolve-Path -Path $autoTunerLog -Relative))
+  $logText = Get-Content -Path $autoTunerLog -Raw -Encoding UTF8
+  foreach ($requiredText in @('title: "Dynamic Rules Log"', 'type: strategy-playbook', 'status: active', 'owner: obsi')) {
+    if ($logText -notmatch [regex]::Escape($requiredText)) {
+      Add-Issue -Level 'ERROR' -Area 'Screener parameter auto-tuner' -Message ("Dynamic rules log missing required frontmatter text: {0}" -f $requiredText)
+      Write-Output ("FAIL dynamic rules log - missing {0}" -f $requiredText)
+    }
+  }
+} else {
+  Add-Issue -Level 'WARN' -Area 'Screener parameter auto-tuner' -Message 'Missing dynamic rules log: obsidian/stock_log/10_strategy_playbooks/Dynamic Rules Log.md'
+  Write-Output 'WARN dynamic rules log - missing'
+}
+
+if (Test-Path $autoTunerConfig) {
+  try {
+    $configJson = Get-Content -Path $autoTunerConfig -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($null -eq $configJson.parameters -or $null -eq $configJson.market_regime_decision) {
+      Add-Issue -Level 'ERROR' -Area 'Screener parameter auto-tuner' -Message 'dynamic_rules_config.json missing parameters or market_regime_decision'
+      Write-Output 'FAIL dynamic rules config - missing parameters or market_regime_decision'
+    } else {
+      Write-Output 'OK   .\picks\cache\dynamic_rules_config.json'
+    }
+  } catch {
+    Add-Issue -Level 'ERROR' -Area 'Screener parameter auto-tuner' -Message ("Could not parse dynamic rules config: {0}" -f $_.Exception.Message)
+    Write-Output 'FAIL dynamic rules config - invalid JSON'
+  }
+} else {
+  Add-Issue -Level 'WARN' -Area 'Screener parameter auto-tuner' -Message 'Missing dynamic rules config: picks/cache/dynamic_rules_config.json'
+  Write-Output 'WARN dynamic rules config - missing'
+}
+
+Write-Output ''
+Write-Output '== Flow-Volume Integration Scanner =='
+$flowVolPy = Join-Path $root 'scripts/run_flow_volume_filter.py'
+$flowVolPs1 = Join-Path $root 'scripts/run_flow_volume_filter.ps1'
+$flowVolDocs = Join-Path $root 'docs/flow_volume_scanner.md'
+$flowVolSnapshot = Join-Path $root 'picks/cache/flow_volume_candidates.json'
+$flowVolLog = Join-Path $root 'obsidian/stock_log/04_candidate_boards/Flow Volume Candidates.md'
+
+foreach ($required in @($flowVolPy, $flowVolPs1, $flowVolDocs)) {
+  if (Test-Path $required) {
+    Write-Output ("OK   {0}" -f (Resolve-Path -Path $required -Relative))
+  } else {
+    Add-Issue -Level 'ERROR' -Area 'Flow-Volume Integration Scanner' -Message ("Missing required flow-volume scanner file: {0}" -f $required)
+    Write-Output ("FAIL {0} - missing" -f $required)
+  }
+}
+
+if (Test-Path $flowVolLog) {
+  Write-Output ("OK   {0}" -f (Resolve-Path -Path $flowVolLog -Relative))
+  $logText = Get-Content -Path $flowVolLog -Raw -Encoding UTF8
+  foreach ($requiredText in @('title: "Flow Volume Candidates"', 'type: candidate-board', 'status: active', 'owner: obsi')) {
+    if ($logText -notmatch [regex]::Escape($requiredText)) {
+      Add-Issue -Level 'ERROR' -Area 'Flow-Volume Integration Scanner' -Message ("Flow volume candidate log missing required frontmatter: {0}" -f $requiredText)
+      Write-Output ("FAIL flow volume log - missing {0}" -f $requiredText)
+    }
+  }
+} else {
+  Add-Issue -Level 'WARN' -Area 'Flow-Volume Integration Scanner' -Message 'Missing Obsidian Flow Volume Candidates log: obsidian/stock_log/04_candidate_boards/Flow Volume Candidates.md'
+  Write-Output 'WARN flow volume log - missing'
+}
+
+if (Test-Path $flowVolSnapshot) {
+  try {
+    $snapshotJson = Get-Content -Path $flowVolSnapshot -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($null -eq $snapshotJson.candidates -or $null -eq $snapshotJson.summary) {
+      Add-Issue -Level 'ERROR' -Area 'Flow-Volume Integration Scanner' -Message 'flow_volume_candidates.json missing candidates or summary'
+      Write-Output 'FAIL flow volume candidates - missing candidates or summary'
+    } else {
+      Write-Output 'OK   .\picks\cache\flow_volume_candidates.json'
+    }
+  } catch {
+    Add-Issue -Level 'ERROR' -Area 'Flow-Volume Integration Scanner' -Message ("Could not parse flow volume candidates JSON: {0}" -f $_.Exception.Message)
+    Write-Output 'FAIL flow volume candidates - invalid JSON'
+  }
+} else {
+  Add-Issue -Level 'WARN' -Area 'Flow-Volume Integration Scanner' -Message 'Missing cache file: picks/cache/flow_volume_candidates.json'
+  Write-Output 'WARN flow volume candidates - missing'
 }
 
 Write-Output ''

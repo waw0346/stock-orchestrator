@@ -80,6 +80,34 @@ def write_json(path: Path, data: Any) -> None:
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def validate_inputs_freshness(
+    paths: Dict[str, Path],
+    max_age_hours: int = 12,
+) -> None:
+    """Warn if any input cache file is older than max_age_hours."""
+    now = datetime.now(KST)
+    for label, path in paths.items():
+        if not path.exists():
+            continue
+        data = read_json(path)
+        generated_at_str = data.get("generated_at") or data.get("snapshot_time")
+        if not generated_at_str:
+            continue
+        try:
+            generated_at = datetime.fromisoformat(generated_at_str)
+            if generated_at.tzinfo is None:
+                generated_at = generated_at.replace(tzinfo=KST)
+            age_hours = (now - generated_at).total_seconds() / 3600
+            if age_hours > max_age_hours:
+                print(
+                    f"WARN: [{label}] cache is {age_hours:.1f}h old "
+                    f"(max {max_age_hours}h). Data may be stale: {path.name}",
+                    file=sys.stderr,
+                )
+        except (ValueError, TypeError):
+            pass
+
+
 def as_float(value: Any, default: float = 0.0) -> float:
     """Return a float from a number-like value."""
     if value is None or value == "":
@@ -275,6 +303,11 @@ def build_obsi_map(args: argparse.Namespace) -> Dict[str, Any]:
 
 def run(args: argparse.Namespace) -> Dict[str, Any]:
     """Build market radar output."""
+    validate_inputs_freshness({
+        "market": Path(args.market_snapshot_path),
+        "candidate": Path(args.candidate_board_path),
+        "flow": Path(args.flow_snapshot_path),
+    })
     market = read_json(Path(args.market_snapshot_path))
     candidate = read_json(Path(args.candidate_board_path))
     flow = read_json(Path(args.flow_snapshot_path))
