@@ -13,10 +13,12 @@ import csv
 import json
 import os
 import sys
-import urllib.request
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
+
+sys.path.insert(0, str(Path(__file__).parent))
+from kiwoom_rest_client import KiwoomRestClient, KiwoomSettings
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -25,7 +27,6 @@ DEFAULT_SNAPSHOT = ROOT / "picks" / "cache" / "foreign_rank_snapshot.json"
 KST = timezone(timedelta(hours=9))
 CSV_FIELDS = ["date", "ticker", "name", "foreign_net_buy", "institution_net_buy", "close", "volume"]
 KIWOOM_RANK_ENDPOINT = "/api/dostk/rkinfo"
-KIWOOM_TOKEN_ENDPOINT = "/oauth2/token"
 
 
 def configure_stdio() -> None:
@@ -94,38 +95,16 @@ def merge_rows(existing: List[Dict[str, str]], fresh: List[Dict[str, Any]]) -> L
     return merged
 
 
-def request_json(url: str, body: Dict[str, Any], headers: Dict[str, str], timeout: int) -> Dict[str, Any]:
-    """POST a JSON request and decode the JSON response."""
-    payload = json.dumps(body, ensure_ascii=False).encode("utf-8")
-    req = urllib.request.Request(
-        url,
-        data=payload,
-        headers={**headers, "Content-Type": "application/json;charset=UTF-8"},
-        method="POST",
-    )
-    with urllib.request.urlopen(req, timeout=timeout) as response:  # nosec B310 - user-configured brokerage API.
-        return json.loads(response.read().decode("utf-8"))
-
-
 def get_token(args: argparse.Namespace) -> str:
     """Return a Kiwoom access token from env or by client credentials."""
-    token = args.access_token or os.environ.get("KIWOOM_ACCESS_TOKEN")
-    if token:
-        return token
-    app_key = args.app_key or os.environ.get("KIWOOM_APP_KEY")
-    app_secret = args.app_secret or os.environ.get("KIWOOM_APP_SECRET")
-    if not app_key or not app_secret:
-        raise RuntimeError("Missing KIWOOM_ACCESS_TOKEN or KIWOOM_APP_KEY/KIWOOM_APP_SECRET")
-    body = {
-        "grant_type": "client_credentials",
-        "appkey": app_key,
-        "secretkey": app_secret,
-    }
-    response = request_json(args.base_url.rstrip("/") + KIWOOM_TOKEN_ENDPOINT, body, {}, args.timeout)
-    issued = response.get("token")
-    if not issued:
-        raise RuntimeError(f"Kiwoom token response missing token: {response.get('return_msg') or response}")
-    return str(issued)
+    settings = KiwoomSettings(
+        app_key=args.app_key or os.environ.get("KIWOOM_APP_KEY", ""),
+        app_secret=args.app_secret or os.environ.get("KIWOOM_APP_SECRET", ""),
+        access_token=args.access_token or os.environ.get("KIWOOM_ACCESS_TOKEN", ""),
+        base_url=args.base_url,
+        timeout=args.timeout,
+    )
+    return KiwoomRestClient(settings).get_access_token()
 
 
 def normalize_rank_item(item: Dict[str, Any], date: str) -> Dict[str, Any]:
@@ -179,21 +158,21 @@ def offline_items(days: int, top: int) -> List[Dict[str, Any]]:
 
 def collect_live(args: argparse.Namespace) -> List[Dict[str, Any]]:
     """Collect foreign net-buy rank data from Kiwoom ka10034."""
-    token = get_token(args)
-    headers = {
-        "authorization": f"Bearer {token}",
-        "api-id": args.api_id,
-    }
+    settings = KiwoomSettings(
+        app_key=args.app_key or os.environ.get("KIWOOM_APP_KEY", ""),
+        app_secret=args.app_secret or os.environ.get("KIWOOM_APP_SECRET", ""),
+        access_token=args.access_token or os.environ.get("KIWOOM_ACCESS_TOKEN", ""),
+        base_url=args.base_url,
+        timeout=args.timeout,
+    )
+    client = KiwoomRestClient(settings)
     body = {
         "mrkt_tp": args.market_type,
         "trde_tp": args.trade_type,
         "dt": args.period,
         "stex_tp": args.exchange_type,
     }
-    url = args.base_url.rstrip("/") + KIWOOM_RANK_ENDPOINT
-    response = request_json(url, body, headers, args.timeout)
-    if int(response.get("return_code", 0)) != 0:
-        raise RuntimeError(f"Kiwoom API error: {response.get('return_msg') or response}")
+    response = client.post_api(args.api_id, KIWOOM_RANK_ENDPOINT, body)
     items = response.get("for_dt_trde_upper") or response.get("items") or []
     date = args.date or now_kst().date().isoformat()
     return [normalize_rank_item(item, date) for item in items[:args.top]]

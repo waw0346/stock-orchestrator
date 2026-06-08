@@ -31,6 +31,14 @@
                                 "reason":  "user_directed_close",
                                 "timestamp":  "2026-05-28T00:00:00+09:00"
                             },
-                            "018260:target_hit:200000"
+                            {
+                                "type":  "SELL",
+                                "ticker":  "018260",
+                                "name":  "삼성SDS",
+                                "quantity":  10,
+                                "price":  300500,
+                                "reason":  "target_hit",
+                                "timestamp":  "2026-06-04T01:54:48+09:00"
+                            }
                         ]
 }

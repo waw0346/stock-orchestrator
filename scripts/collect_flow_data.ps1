@@ -4,7 +4,8 @@ param(
   [string]$Tickers = '',
   [string]$Date = '',
   [string]$StartDate = '',
-  [switch]$OfflineSample,
+  # KRX/pykrx live provider has been removed. Default to offline fixture until Kiwoom REST is wired up.
+  [bool]$OfflineSample = $true,
   [switch]$UpdateMarketSnapshot
 )
 
@@ -30,7 +31,7 @@ if (-not [string]::IsNullOrWhiteSpace($Date)) {
 if (-not [string]::IsNullOrWhiteSpace($StartDate)) {
   $argsList += @('--start-date', $StartDate)
 }
-if ($OfflineSample) {
+if ($OfflineSample -eq $true) {
   $argsList += '--offline-sample'
 }
 if ($UpdateMarketSnapshot) {

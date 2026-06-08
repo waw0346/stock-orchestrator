@@ -37,4 +37,5 @@
 Pre-Trade Gate: PASS|HOLD|BLOCK
 Portfolio Fit: PASS|HOLD|BLOCK
 Position Size: 총자산 대비 X%, 손절 시 예상 손실 Y%
+Market Regime: Risk-On|Neutral|Risk-Off
 ```

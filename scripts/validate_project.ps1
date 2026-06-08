@@ -70,7 +70,7 @@ function Normalize-PickStatus {
   if ([string]::IsNullOrWhiteSpace($Status)) {
     return ''
   }
-  if ($Status -match '^(active|watch|closed|completed)') {
+  if ($Status -match '^(active|watch|closed|completed|blocked)') {
     return $matches[1]
   }
   return $Status.Trim()

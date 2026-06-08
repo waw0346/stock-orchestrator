@@ -205,7 +205,7 @@ def score_flow(market_item: Optional[Dict[str, Any]], notes: List[str], gaps: Li
     return 0
 
 
-def score_pullback(row: Dict[str, Any], market_item: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+def score_pullback(row: Dict[str, Any], market_item: Optional[Dict[str, Any]], rsi_max: float = 75.0, sharp_drop_max: float = -20.0) -> Dict[str, Any]:
     """Score one row with conservative available-data pullback checks."""
     ticker = row["ticker"]
     price = market_item.get("price") if market_item else row.get("index_price")
@@ -251,8 +251,8 @@ def score_pullback(row: Dict[str, Any], market_item: Optional[Dict[str, Any]]) -
     signals["flow_check"] = score_flow(market_item, notes, data_gaps)
 
     if change_rate is not None:
-        if change_rate <= -20:
-            block_reasons.append("sharp_drop_over_20pct")
+        if change_rate <= sharp_drop_max:
+            block_reasons.append(f"sharp_drop_over_{abs(int(sharp_drop_max))}pct")
         elif change_rate <= -5:
             notes.append("단기 하락폭이 커서 당일 종가 확인 필요")
         elif change_rate >= 5:
@@ -261,7 +261,7 @@ def score_pullback(row: Dict[str, Any], market_item: Optional[Dict[str, Any]]) -
     rsi14 = metric(market_item, "rsi14", "rsi_14")
     if rsi14 is None:
         data_gaps.append("RSI14 unavailable")
-    elif rsi14 >= 75:
+    elif rsi14 >= rsi_max:
         block_reasons.append("rsi_overheated")
     elif 45 <= rsi14 <= 60:
         notes.append("RSI14 is in pullback support range")
@@ -335,7 +335,22 @@ def run(args: argparse.Namespace) -> Dict[str, Any]:
     rows = parse_index(Path(args.index_path))
     market = offline_market_snapshot() if args.offline_sample else read_json(Path(args.market_snapshot_path))
     by_ticker = market_by_ticker(market)
-    results = [score_pullback(row, by_ticker.get(row["ticker"])) for row in rows]
+    
+    # Load dynamic rules if available
+    config_path = ROOT / "picks" / "cache" / "dynamic_rules_config.json"
+    rsi_max = 75.0
+    sharp_drop_max = -20.0
+    if config_path.exists():
+        try:
+            config = json.loads(config_path.read_text(encoding="utf-8"))
+            params = config.get("parameters", {})
+            rsi_max = float(params.get("pullback_rsi_max", rsi_max))
+            sharp_drop_max = float(params.get("pullback_sharp_drop_max", sharp_drop_max))
+            print(f"Loaded dynamic parameters: pullback_rsi_max = {rsi_max}, pullback_sharp_drop_max = {sharp_drop_max}%", file=sys.stderr)
+        except Exception as exc:
+            print(f"Warning: Failed to load dynamic rules config: {exc}", file=sys.stderr)
+            
+    results = [score_pullback(row, by_ticker.get(row["ticker"]), rsi_max=rsi_max, sharp_drop_max=sharp_drop_max) for row in rows]
     return {
         "generated_at": now_kst(),
         "mode": "offline_sample" if args.offline_sample else "live",
