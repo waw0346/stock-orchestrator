@@ -94,10 +94,10 @@ Market Regime: Risk-On|Neutral|Risk-Off
 |------|---------|----------|
 | 주간 추적 | weekly-tracker | picks/*.md |
 | 월간 추적 | monthly-tracker | picks/*.md |
-| 수급·모멘텀 추적 | flow-momentum-tracker | picks/2026-05-12_flow_momentum_picks.md → picks/tracking_weekly_cumulative_flow_momentum.md |
-| 진입·청산 타이밍 | entry-exit-timing-strategist | picks/entry_exit_timing_playbook.md |
+| 수급·모멘텀 추적 (flow momentum weekly) | @flow-momentum-tracker | picks/2026-05-12_flow_momentum_picks.md → picks/tracking_weekly_cumulative_flow_momentum.md |
+| 진입·청산 타이밍 (entry exit timing) | @entry-exit-timing-strategist | picks/entry_exit_timing_playbook.md |
 | 테마 추적 | theme-tracker | picks/cache/candidate_board.json → picks/theme_report.md |
-| 미장 마감 전략 | us-close-korea-strategist | → picks/WATCHLIST.md (갭 +5% 추격 BLOCK) |
+| 미장 마감 전략 | @us-close-korea-strategist | → picks/WATCHLIST.md (갭 +5% 추격 BLOCK) |
 | 장전 수급 스캔 | preopen-foreign-scanner | picks/WATCHLIST.md (갭 +5% 추격 BLOCK) |
 
 ---
