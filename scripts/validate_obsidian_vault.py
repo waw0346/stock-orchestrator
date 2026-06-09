@@ -19,7 +19,7 @@ VALID_EVIDENCE_TYPES = {
     # Market & Screening Types
     'market-analysis', 'market-news', 'pullback-screen',
     # Calendar Types
-    'stock-calendar-day', 'stock-calendar-month', 'stock-calendar-year', 'index'
+    'stock-calendar-day', 'stock-calendar-month', 'stock-calendar-year', 'index', 'calendar-sync-history'
 }
 
 def parse_frontmatter(content):

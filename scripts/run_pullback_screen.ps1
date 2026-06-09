@@ -25,5 +25,8 @@ if ($OfflineSample) {
   $argsList += '--offline-sample'
 }
 
+$oldPreference = $ErrorActionPreference
+$ErrorActionPreference = 'Continue'
 python @argsList
+$ErrorActionPreference = $oldPreference
 exit $LASTEXITCODE

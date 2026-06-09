@@ -225,7 +225,7 @@ Assert-FileContains 'docs/flow_data_collector.md' @(
 )
 
 $flowCollector = Join-Path $root 'scripts/collect_flow_data.ps1'
-$flowRun = & $flowCollector -MarketSnapshotPath $flowMarketOutput -SnapshotPath $flowOutput -OfflineSample -UpdateMarketSnapshot 2>&1
+$flowRun = & $flowCollector -MarketSnapshotPath $flowMarketOutput -SnapshotPath $flowOutput -OfflineSample $true -UpdateMarketSnapshot 2>&1
 $flowExitCode = if ($null -eq $LASTEXITCODE) { 0 } else { $LASTEXITCODE }
 if ($flowExitCode -ne 0) {
   throw "Flow data collector offline sample failed with exit code $flowExitCode`n$($flowRun -join "`n")"

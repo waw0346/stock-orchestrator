@@ -32,5 +32,8 @@ if (-not [string]::IsNullOrWhiteSpace($OutputPath)) {
 }
 $argsList += @('--mode', $Mode)
 
+$oldPreference = $ErrorActionPreference
+$ErrorActionPreference = 'Continue'
 python @argsList
+$ErrorActionPreference = $oldPreference
 exit $LASTEXITCODE
