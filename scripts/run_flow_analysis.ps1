@@ -1,7 +1,8 @@
 param(
   [string]$OutputPath = '',
   [switch]$OfflineSample,
-  [int]$TopLimit = 100
+  [int]$TopLimit = 100,
+  [int]$ConsecutiveDays = 0
 )
 
 $ErrorActionPreference = 'Stop'
@@ -38,6 +39,9 @@ if ($OfflineSample) {
   $argsList += '--offline-sample'
 }
 $argsList += @('--top-limit', [string]$TopLimit)
+if ($ConsecutiveDays -gt 0) {
+  $argsList += @('--consecutive-days', [string]$ConsecutiveDays)
+}
 
 python @argsList
 exit $LASTEXITCODE

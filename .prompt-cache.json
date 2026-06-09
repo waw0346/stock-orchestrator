@@ -1,0 +1,6 @@
+{
+  "minTokensToCache": 1024,
+  "cacheToolDefinitions": true,
+  "cacheSystemPrompt": true,
+  "maxCacheBreakpoints": 4
+}

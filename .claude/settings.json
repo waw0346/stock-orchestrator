@@ -3,6 +3,11 @@
     "playmcp": {
       "type": "http",
       "url": "https://playmcp.kakao.com/mcp"
+    },
+    "prompt-caching": {
+      "type": "stdio",
+      "command": "prompt-caching-mcp",
+      "args": []
     }
   },
   "hooks": {

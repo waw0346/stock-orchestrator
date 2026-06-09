@@ -127,9 +127,9 @@ def generate_recent_weekdays(n: int) -> List[str]:
     return days
 
 
-def collect_live_data(client: KiwoomRestClient, dates: List[str], top_limit: int) -> Dict[str, Any]:
+def collect_live_data(client: KiwoomRestClient, dates: List[str], consecutive_days: int, top_limit: int) -> Dict[str, Any]:
     """Query Kiwoom REST API to collect live foreigner and pension fund data for the recent weekdays."""
-    # We want to find the most recent 3 dates that actually return data for each type.
+    # We want to find the most recent consecutive_days dates that actually return data for each type.
     # Foreigner rank
     foreign_buy_history: Dict[str, List[Dict[str, Any]]] = {}
     foreign_sell_history: Dict[str, List[Dict[str, Any]]] = {}
@@ -153,19 +153,19 @@ def collect_live_data(client: KiwoomRestClient, dates: List[str], top_limit: int
         
         if len(pension_today_buy) >= 10 and len(foreigner_today_buy) >= 10:
             use_today = True
-            print(f"Today ({today_str}) market data is complete. Scanning today + last 2 days.", file=sys.stderr)
+            print(f"Today ({today_str}) market data is complete. Scanning today + last {consecutive_days-1} days.", file=sys.stderr)
         else:
-            print(f"Today ({today_str}) market data is incomplete (Pension: {len(pension_today_buy)}, Foreigner: {len(foreigner_today_buy)}). Scanning last 3 completed days.", file=sys.stderr)
+            print(f"Today ({today_str}) market data is incomplete (Pension: {len(pension_today_buy)}, Foreigner: {len(foreigner_today_buy)}). Scanning last {consecutive_days} completed days.", file=sys.stderr)
     except Exception as exc:
-        print(f"Failed to probe today's data: {exc}. Defaulting to last 3 completed days.", file=sys.stderr)
+        print(f"Failed to probe today's data: {exc}. Defaulting to last {consecutive_days} completed days.", file=sys.stderr)
 
     # Select target dates and relative offsets based on probe
     if use_today:
-        target_dates = dates[:3]
-        relative_offsets = ["0", "1", "2"]
+        target_dates = dates[:consecutive_days]
+        relative_offsets = [str(i) for i in range(consecutive_days)]
     else:
-        target_dates = dates[1:4]
-        relative_offsets = ["1", "2", "3"]
+        target_dates = dates[1:consecutive_days+1]
+        relative_offsets = [str(i) for i in range(1, consecutive_days+1)]
 
     print(f"Target trading days: {', '.join(target_dates)}", file=sys.stderr)
     
@@ -391,7 +391,7 @@ def print_markdown_report(result: Dict[str, Any]) -> None:
 
 def parse_args() -> argparse.Namespace:
     """Parse CLI arguments."""
-    parser = argparse.ArgumentParser(description="Collect and scan 3-day consecutive foreign & pension fund streaks.")
+    parser = argparse.ArgumentParser(description="Collect and scan consecutive foreign & pension fund streaks.")
     parser.add_argument("--output-path", default=str(DEFAULT_OUTPUT))
     parser.add_argument("--offline-sample", action="store_true", help="Run with deterministic sample data.")
     parser.add_argument("--top-limit", type=int, default=100, help="Number of ranks to fetch from Kiwoom API.")
@@ -400,6 +400,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--app-key", default="")
     parser.add_argument("--app-secret", default="")
     parser.add_argument("--timeout", type=int, default=10)
+    parser.add_argument("--consecutive-days", type=int, default=0, help="Streak length (e.g. 3 or 4). If 0, uses dynamic rules or defaults to 3.")
     return parser.parse_args()
 
 
@@ -408,14 +409,12 @@ def main() -> int:
     configure_stdio()
     args = parse_args()
     try:
-        # Generate the last 5 weekdays to probe
-        recent_weekdays = generate_recent_weekdays(5)
-        
         # Load dynamic rules if available
         config_path = ROOT / "picks" / "cache" / "dynamic_rules_config.json"
-        consecutive_days = 3
+        consecutive_days = args.consecutive_days if args.consecutive_days > 0 else 3
         top_limit = args.top_limit
-        if config_path.exists():
+        
+        if args.consecutive_days <= 0 and config_path.exists():
             try:
                 config = json.loads(config_path.read_text(encoding="utf-8"))
                 params = config.get("parameters", {})
@@ -425,6 +424,11 @@ def main() -> int:
                 print(f"Loaded dynamic parameter: top_limit = {top_limit}", file=sys.stderr)
             except Exception as exc:
                 print(f"Warning: Failed to load dynamic rules config: {exc}", file=sys.stderr)
+        elif args.consecutive_days > 0:
+            print(f"Using CLI parameter: consecutive_days = {consecutive_days}", file=sys.stderr)
+
+        # Generate enough weekdays to probe
+        recent_weekdays = generate_recent_weekdays(consecutive_days + 2)
 
         if args.offline_sample:
             raw_data = get_offline_sample_data(recent_weekdays)
@@ -437,7 +441,7 @@ def main() -> int:
                 timeout=args.timeout,
             )
             client = KiwoomRestClient(settings)
-            raw_data = collect_live_data(client, recent_weekdays, top_limit)
+            raw_data = collect_live_data(client, recent_weekdays, consecutive_days, top_limit)
 
         # Analyze streaks
         foreign_buy_streaks = compute_consecutive_streaks(raw_data["foreign_buy"], consecutive_days=consecutive_days, is_sell=False)
