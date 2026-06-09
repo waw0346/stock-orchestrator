@@ -15,6 +15,28 @@
       "target_sell_ratio": 0.5
     },
     {
+      "ticker": "012450",
+      "name": "한화에어로스페이스",
+      "status": "active",
+      "entry_low": 1000000,
+      "entry_high": 1080000,
+      "target": 1360000,
+      "stop_loss": 950000,
+      "max_position_pct": 4,
+      "target_sell_ratio": 0.5
+    },
+    {
+      "ticker": "088980",
+      "name": "맥쿼리인프라",
+      "status": "active",
+      "entry_low": 10700,
+      "entry_high": 11000,
+      "target": 12000,
+      "stop_loss": 10200,
+      "max_position_pct": 4,
+      "target_sell_ratio": 0.5
+    },
+    {
       "ticker": "000660",
       "name": "SK하이닉스",
       "status": "closed",

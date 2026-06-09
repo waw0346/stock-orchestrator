@@ -1,6 +1,6 @@
-﻿{
+{
     "mode":  "paper",
-    "cash":  100614000,
+    "cash":  92338000,
     "realized_pnl":  2095000,
     "positions":  [
                       {
@@ -9,9 +9,23 @@
                           "quantity":  11,
                           "avg_price":  171000,
                           "opened_at":  "2026-05-12T01:50:00+09:00"
+                      },
+                      {
+                          "ticker":  "012450",
+                          "name":  "한화에어로스페이스",
+                          "quantity":  4,
+                          "avg_price":  1068000,
+                          "opened_at":  "2026-06-09T13:20:00+09:00"
+                      },
+                      {
+                          "ticker":  "088980",
+                          "name":  "맥쿼리인프라",
+                          "quantity":  364,
+                          "avg_price":  11000,
+                          "opened_at":  "2026-06-09T13:20:00+09:00"
                       }
                   ],
-    "last_run":  "2026-06-05T09:12:23+09:00",
+    "last_run":  "2026-06-09T13:20:00+09:00",
     "executed_events":  [
                             {
                                 "type":  "SELL",
@@ -39,6 +53,24 @@
                                 "price":  300500,
                                 "reason":  "target_hit",
                                 "timestamp":  "2026-06-04T01:54:48+09:00"
+                            },
+                            {
+                                "type":  "BUY",
+                                "ticker":  "012450",
+                                "name":  "한화에어로스페이스",
+                                "quantity":  4,
+                                "price":  1068000,
+                                "reason":  "initial_entry",
+                                "timestamp":  "2026-06-09T13:20:00+09:00"
+                            },
+                            {
+                                "type":  "BUY",
+                                "ticker":  "088980",
+                                "name":  "맥쿼리인프라",
+                                "quantity":  364,
+                                "price":  11000,
+                                "reason":  "initial_entry",
+                                "timestamp":  "2026-06-09T13:20:00+09:00"
                             }
                         ]
 }
