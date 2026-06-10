@@ -5,3 +5,5 @@ timestamp,ticker,name,side,quantity,price,notional,reason
 2026-05-22T00:00:00+09:00,005930,삼성전자,SELL,21,295000,6195000,user_directed_close
 2026-05-28T00:00:00+09:00,000660,SK하이닉스,SELL,2,1940000,3880000,user_directed_close
 2026-06-04T01:54:48+09:00,018260,삼성SDS,SELL,10,300500,3005000,target_hit
+2026-06-08T09:33:34+09:00,018260,삼성SDS,SELL,5,225000,1125000,target_hit
+2026-06-10T12:52:00+09:00,006800,미래에셋증권,BUY,36,51500,1854000,entry_zone

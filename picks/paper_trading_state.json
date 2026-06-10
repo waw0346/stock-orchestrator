@@ -1,12 +1,12 @@
-{
+﻿{
     "mode":  "paper",
-    "cash":  92338000,
-    "realized_pnl":  2095000,
+    "cash":  91609000,
+    "realized_pnl":  2365000,
     "positions":  [
                       {
                           "ticker":  "018260",
                           "name":  "삼성SDS",
-                          "quantity":  11,
+                          "quantity":  6,
                           "avg_price":  171000,
                           "opened_at":  "2026-05-12T01:50:00+09:00"
                       },
@@ -23,9 +23,16 @@
                           "quantity":  364,
                           "avg_price":  11000,
                           "opened_at":  "2026-06-09T13:20:00+09:00"
+                      },
+                      {
+                          "ticker":  "006800",
+                          "name":  "미래에셋증권",
+                          "quantity":  36,
+                          "avg_price":  51500,
+                          "opened_at":  "2026-06-10T12:52:00+09:00"
                       }
                   ],
-    "last_run":  "2026-06-09T13:20:00+09:00",
+    "last_run":  "2026-06-10T13:01:56+09:00",
     "executed_events":  [
                             {
                                 "type":  "SELL",
@@ -71,6 +78,7 @@
                                 "price":  11000,
                                 "reason":  "initial_entry",
                                 "timestamp":  "2026-06-09T13:20:00+09:00"
-                            }
+                            },
+                            "018260:target_hit:200000"
                         ]
 }

@@ -312,6 +312,7 @@ def run(args: argparse.Namespace) -> Dict[str, Any]:
     candidate = read_json(Path(args.candidate_board_path))
     flow = read_json(Path(args.flow_snapshot_path))
     news = read_json(Path(args.fiscal_ai_news_path))
+    realtime_leaders = read_json(Path(args.realtime_leaders_path))
 
     rows = merge_rows(market, candidate, flow, news)
     theme_flows = build_theme_flows(rows)
@@ -322,12 +323,13 @@ def run(args: argparse.Namespace) -> Dict[str, Any]:
     return {
         "generated_at": now_kst(),
         "mode": args.mode,
-        "source": "market+candidate+flow+fiscal_ai_news",
+        "source": "market+candidate+flow+fiscal_ai_news+realtime_leaders",
         "inputs": {
             "market_generated_at": market.get("generated_at"),
             "candidate_generated_at": candidate.get("generated_at"),
             "flow_generated_at": flow.get("generated_at"),
             "fiscal_ai_news_generated_at": news.get("generated_at"),
+            "realtime_leaders_generated_at": realtime_leaders.get("generated_at"),
         },
         "preopen": {
             "purpose": "Frame the day before the open using US catalysts, macro watch slots, and candidate board state.",
@@ -338,6 +340,7 @@ def run(args: argparse.Namespace) -> Dict[str, Any]:
             "purpose": "Track where money is moving without issuing trade instructions.",
             "alerts": alerts,
             "top_movers": top_movers,
+            "realtime_leaders": realtime_leaders.get("leaders", []),
         },
         "after_close": {
             "purpose": "Reconcile intraday interpretation with closing price, KRX-confirmed flow, and Obsidian review.",
@@ -363,6 +366,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--candidate-board-path", default=str(DEFAULT_CANDIDATE))
     parser.add_argument("--flow-snapshot-path", default=str(DEFAULT_FLOW))
     parser.add_argument("--fiscal-ai-news-path", default=str(DEFAULT_FISCAL_AI_NEWS))
+    parser.add_argument("--realtime-leaders-path", default=str(ROOT / "picks" / "cache" / "realtime_leaders.json"))
     parser.add_argument("--output-path", default=str(DEFAULT_OUTPUT))
     parser.add_argument("--mode", choices=("preopen", "intraday", "after_close"), default="intraday")
     return parser.parse_args()
