@@ -140,7 +140,7 @@ if (Test-Path $obsiAgent) {
 
 if (Test-Path $gitignoreFile) {
   $gitignoreText = Get-Content -Path $gitignoreFile -Raw -Encoding UTF8
-  if ($gitignoreText -match '(?m)^obsidian/$') {
+  if ($gitignoreText -match '(?m)^obsidian/\r?$') {
     Write-Output 'OK   .gitignore obsidian/'
   } else {
     Add-Issue -Level 'ERROR' -Area 'Obsidian record DB' -Message '.gitignore must exclude obsidian/'

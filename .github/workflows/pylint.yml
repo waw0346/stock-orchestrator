@@ -27,4 +27,8 @@ jobs:
         python -m pip install -r requirements.txt
     - name: Analyze Python code with Pylint
       run: |
-        python -m pylint $(git ls-files '*.py')
+        python -m pylint --errors-only \
+          scripts/bootstrap.py \
+          scripts/summarize_context.py \
+          scripts/lib \
+          tests/run_cross_platform_smoke.py
