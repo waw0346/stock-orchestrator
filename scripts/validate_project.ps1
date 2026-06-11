@@ -1246,6 +1246,55 @@ foreach ($relative in $capitalAgents) {
 }
 
 Write-Output ''
+Write-Output '== AI runtime portability =='
+$runtimeFiles = @(
+  'AGENTS.md',
+  'docs/ai_runtime_adapter.md',
+  'docs/context_summary.md',
+  'scripts/bootstrap.py',
+  'scripts/bootstrap.ps1',
+  'scripts/summarize_context.py',
+  'scripts/lib/__init__.py',
+  'scripts/lib/env.py',
+  'scripts/lib/io.py',
+  'scripts/lib/status.py',
+  'scripts/lib/universe.py',
+  'tests/run_bootstrap_tests.ps1',
+  'tests/run_context_summary_tests.ps1',
+  'tests/run_cross_platform_smoke.py'
+)
+
+foreach ($relative in $runtimeFiles) {
+  $path = Join-Path $root $relative
+  if (Test-Path $path) {
+    Write-Output ("OK   {0}" -f (Resolve-Path -Path $path -Relative))
+  } else {
+    Add-Issue -Level 'ERROR' -Area 'AI runtime portability' -Message ("Missing runtime portability file: {0}" -f $relative)
+    Write-Output ("FAIL {0} - missing" -f $relative)
+  }
+}
+
+$runtimeContracts = @(
+  @{ Path = 'AGENTS.md'; Text = 'python scripts/summarize_context.py --ticker <ticker> --purpose risk|flow|market' },
+  @{ Path = 'docs/ai_runtime_adapter.md'; Text = 'Never treat cached data as live' },
+  @{ Path = 'docs/context_summary.md'; Text = 'Do not paste full DART/news/cache payloads' },
+  @{ Path = 'scripts/bootstrap.py'; Text = 'requirements_present' },
+  @{ Path = 'scripts/summarize_context.py'; Text = 'token_control' },
+  @{ Path = 'tests/run_cross_platform_smoke.py'; Text = 'test_context_summary_projection' }
+)
+
+foreach ($contract in $runtimeContracts) {
+  $path = Join-Path $root $contract.Path
+  if (Test-Path $path) {
+    $text = Get-Content -Path $path -Raw -Encoding UTF8
+    if ($text -notmatch [regex]::Escape($contract.Text)) {
+      Add-Issue -Level 'ERROR' -Area 'AI runtime portability' -Message ("Runtime portability contract missing text: {0} text={1}" -f $contract.Path, $contract.Text)
+      Write-Output ("FAIL {0} - missing {1}" -f $contract.Path, $contract.Text)
+    }
+  }
+}
+
+Write-Output ''
 Write-Output '== Summary =='
 $errors = @($issues | Where-Object Level -eq 'ERROR')
 $warnings = @($issues | Where-Object Level -eq 'WARN')

@@ -25,6 +25,7 @@ foreach ($expected in @(
   'Foreign streak scanner',
   'Market radar',
   'Capital protection gate',
+  'AI runtime portability',
   'Summary'
 )) {
   if ($text -notmatch [regex]::Escape($expected)) {
@@ -48,7 +49,12 @@ foreach ($expectedSource in @(
   'market_radar.json',
   'Evidence Dashboard',
   'Market Radar Template',
-  'Smart Connections'
+  'Smart Connections',
+  'AGENTS.md',
+  'ai_runtime_adapter.md',
+  'summarize_context.py',
+  'scripts/lib/env.py',
+  'run_cross_platform_smoke.py'
 )) {
   $validatorText = Get-Content -Path $validator -Raw -Encoding UTF8
   if ($validatorText -notmatch [regex]::Escape($expectedSource)) {

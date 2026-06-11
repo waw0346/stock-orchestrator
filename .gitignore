@@ -21,6 +21,8 @@ picks/alerts/*.json
 obsidian/
 
 # ── 테스트 아티팩트 (run_paper_trading_tests.ps1 이 생성/삭제) ──────────────
+*.test
+.claude/agents/*.test
 picks/*.test.json
 picks/*.test.csv
 picks/paper_price_snapshot.target.test.json
