@@ -11,6 +11,11 @@ param(
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
+if (-not [Environment]::UserInteractive) {
+  Write-Host "[INFO] Non-interactive environment detected. Enforcing -NoPrompt." -ForegroundColor Gray
+  $NoPrompt = $true
+}
+
 function Resolve-WorkspacePath {
   param([string]$Path)
   if ([string]::IsNullOrWhiteSpace($Path)) {
@@ -37,22 +42,22 @@ function Get-LatestCompletedWeekCloseDate {
   param([datetime]$NowLocal)
 
   $today = $NowLocal.Date
-  $isWeekend = $today.DayOfWeek -in @([DayOfWeek]::Saturday, [DayOfWeek]::Sunday)
-  $krxClose = Get-Date -Year $today.Year -Month $today.Month -Day $today.Day -Hour 15 -Minute 30 -Second 0
+  $day = [int]$today.DayOfWeek
 
-  $daysSinceFriday = ([int]$today.DayOfWeek - [int][DayOfWeek]::Friday + 7) % 7
-  $friday = $today.AddDays(-1 * $daysSinceFriday)
+  $sub = switch ($day) {
+    0 { 2 } # Sunday
+    1 { 3 } # Monday
+    2 { 4 } # Tuesday
+    3 { 5 } # Wednesday
+    4 { 6 } # Thursday
+    5 {     # Friday
+      $krxClose = Get-Date -Year $today.Year -Month $today.Month -Day $today.Day -Hour 15 -Minute 30 -Second 0
+      if ($NowLocal -lt $krxClose) { 7 } else { 0 }
+    }
+    6 { 1 } # Saturday
+  }
 
-  if ($today.DayOfWeek -eq [DayOfWeek]::Friday -and $NowLocal -lt $krxClose) {
-    return $friday.AddDays(-7)
-  }
-  if ($isWeekend) {
-    return $friday
-  }
-  if ($today.DayOfWeek -lt [DayOfWeek]::Friday) {
-    return $friday.AddDays(-7)
-  }
-  return $friday
+  return $today.AddDays(-$sub)
 }
 
 function Parse-NumberFromWon {
@@ -390,9 +395,9 @@ function Append-WeeklySection {
     $weekly = $WeeklyByTicker[$ticker]
     $metrics = Compute-Returns -Base $pick.base -Target $pick.target -Stop $pick.stop -Close $weekly.close
     $flow = ("외인 {0}{1:N0}주 / 기관 {2}{3:N0}주" -f
-      (if ($weekly.foreign_net_shares -ge 0) { '+' } else { '' }),
+      $(if ($weekly.foreign_net_shares -ge 0) { '+' } else { '' }),
       $weekly.foreign_net_shares,
-      (if ($weekly.inst_net_shares -ge 0) { '+' } else { '' }),
+      $(if ($weekly.inst_net_shares -ge 0) { '+' } else { '' }),
       $weekly.inst_net_shares
     )
     $mom = if ($weekly.week52_high) {
@@ -437,7 +442,7 @@ $($exRows -join "`r`n")
 
   $section = @"
 
-## Week $nextWeek: $weekStr
+## Week $($nextWeek): $weekStr
 
 $MarketState
 - (메모) 이번 주 관찰 포인트를 1~2줄로 요약. (예: 반도체 주도/외국인 매도 vs 기관 매수 등)
@@ -518,7 +523,7 @@ function Update-PlaybookForFlowMomentum {
     $weeklyMonitoring = ("(1) 주간 종가 기준 손절가({0}) 방어 (2) 외국인/기관 주간 순매수 전환/확대 여부 (3) {1} 재시험 구간의 변동성" -f (Format-Won $pick.stop), $addTrigger)
 
     $sectionHeader = ("## {0} ({1})" -f [regex]::Escape($pick.name), $ticker)
-    $pattern = "(?ms)^(##\s+$([regex]::Escape($pick.name))\s+\($ticker\)\s*\R)(.*?)(?=^##\s+|\z)"
+    $pattern = "(?ms)^(##\s+$([regex]::Escape($pick.name))\s+\($ticker\)\s*\r?\n)(.*?)(?=^##\s+|\z)"
     $text = [regex]::Replace($text, $pattern, {
       param($m)
       $header = $m.Groups[1].Value
@@ -545,7 +550,7 @@ function Update-PlaybookForFlowMomentum {
         $exitPlanShort = ("{0} 접근 시 변동성 점검 / {1} 도달 시 재평가" -f (Format-Won $pick.target), (Format-Won $pick.target))
         return ("| {0} | {1} | {2} | {3} | {4} | {5} |" -f
           $pick.name,
-          (if ($nearTarget -le 3) { 'B: Probe only (목표 근접)' } else { 'A: Wait for pullback' }),
+          $(if ($nearTarget -le 3) { 'B: Probe only (목표 근접)' } else { 'A: Wait for pullback' }),
           ("현재가 대비 -2%~-5% 조정 후 지지, 또는 {0} 재돌파" -f $addTrigger),
           $stopLossText,
           $exitPlanShort,

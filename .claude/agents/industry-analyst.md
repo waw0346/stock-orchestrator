@@ -2,6 +2,7 @@
 name: industry-analyst
 description: 한국 상장기업이 속한 산업의 사이클, 경쟁구도, 거시환경을 분석하는 산업분석 전문가. 업종 동향, 규제 환경, 수급 전망을 파악할 때 호출.
 model: sonnet
+tools: [WebSearch, WebFetch, Read]
 ---
 
 # 산업분석 애널리스트

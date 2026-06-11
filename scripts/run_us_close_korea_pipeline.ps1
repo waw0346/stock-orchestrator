@@ -26,7 +26,7 @@ $stages = @(
 # 1. Kiwoom Token Refresh
 Write-Host "`n[1/7] Refreshing Kiwoom OpenAPI Token..." -ForegroundColor Yellow
 try {
-    powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $scriptDir "refresh_kiwoom_token.ps1")
+    python (Join-Path $scriptDir "refresh_kiwoom_token.py")
     if ($LASTEXITCODE -ne 0) { throw "Token refresh script returned exit code $LASTEXITCODE" }
     Write-Host "[OK] Token refresh success" -ForegroundColor Green
     $stages[0].Status = "SUCCESS"
@@ -49,11 +49,11 @@ if (Test-Path $envFile) {
 # 2. Collect US Close Data & Map Sectors
 Write-Host "`n[2/7] Collecting US Close Data & Mapping Sectors..." -ForegroundColor Yellow
 try {
-    $usCloseArgs = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", (Join-Path $scriptDir "collect_us_close_data.ps1"))
+    $usCloseArgs = @((Join-Path $scriptDir "collect_us_close_data.py"))
     if ($OfflineSample) {
-        $usCloseArgs += "-OfflineSample"
+        $usCloseArgs += "--offline-sample"
     }
-    powershell @usCloseArgs
+    python @usCloseArgs
     if ($LASTEXITCODE -ne 0) { throw "US close script returned exit code $LASTEXITCODE" }
     Write-Host "[OK] US close data collection completed" -ForegroundColor Green
     $stages[1].Status = "SUCCESS"
@@ -66,7 +66,7 @@ try {
 # 3. Collect Korean Market Prices
 Write-Host "`n[3/7] Collecting Korean Market Price Data..." -ForegroundColor Yellow
 try {
-    powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $scriptDir "collect_market_data.ps1")
+    python (Join-Path $scriptDir "collect_market_data.py")
     if ($LASTEXITCODE -ne 0) { throw "Collect market data script returned exit code $LASTEXITCODE" }
     Write-Host "[OK] Korean market price collection completed" -ForegroundColor Green
     $stages[2].Status = "SUCCESS"
@@ -83,11 +83,11 @@ try {
     $appKey = $envLocal['KIWOOM_APP_KEY']
     $appSecret = $envLocal['KIWOOM_APP_SECRET']
     if ($token -and $appKey -and $appSecret) {
-        $flowArgs = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", (Join-Path $scriptDir "collect_kiwoom_foreign_rank.ps1"), "-AccessToken", $token, "-AppKey", $appKey, "-AppSecret", $appSecret)
+        $flowArgs = @((Join-Path $scriptDir "collect_kiwoom_foreign_rank.py"), "--access-token", $token, "--app-key", $appKey, "--app-secret", $appSecret)
         if ($OfflineSample) {
-            $flowArgs += "-OfflineSample"
+            $flowArgs += "--offline-sample"
         }
-        powershell @flowArgs
+        python @flowArgs
         if ($LASTEXITCODE -ne 0) { throw "Collect foreign rank script returned exit code $LASTEXITCODE" }
         Write-Host "[OK] Kiwoom foreign flows collection completed" -ForegroundColor Green
         $stages[3].Status = "SUCCESS"
@@ -105,11 +105,11 @@ try {
 # 5. Run Preopen Filter
 Write-Host "`n[5/7] Filtering Preopen Candidates & Calculating Risks..." -ForegroundColor Yellow
 try {
-    $filterArgs = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", (Join-Path $scriptDir "run_preopen_filter.ps1"))
+    $filterArgs = @((Join-Path $scriptDir "run_preopen_filter.py"))
     if ($OfflineSample) {
-        $filterArgs += "-OfflineSample"
+        $filterArgs += "--offline-sample"
     }
-    powershell @filterArgs
+    python @filterArgs
     if ($LASTEXITCODE -ne 0) { throw "Run preopen filter script returned exit code $LASTEXITCODE" }
     Write-Host "[OK] Preopen candidates filtering completed" -ForegroundColor Green
     $stages[4].Status = "SUCCESS"
@@ -122,8 +122,8 @@ try {
 # 6. System Integrity Validation
 Write-Host "`n[6/7] Validating Project Integrity & Reports..." -ForegroundColor Yellow
 try {
-    powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $scriptDir "validate_project.ps1")
-    if ($LASTEXITCODE -ne 0) { throw "Project validation script returned exit code $LASTEXITCODE" }
+    & (Join-Path $scriptDir "validate_project.ps1")
+    # No $LASTEXITCODE check needed for direct script block/function invocation; exceptions are caught directly by catch block.
     Write-Host "[OK] Project integrity validation completed" -ForegroundColor Green
     $stages[5].Status = "SUCCESS"
 } catch {

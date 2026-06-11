@@ -1,6 +1,7 @@
 ---
 name: flow-analyst
 description: 한국 상장주식의 외국인/기관 수급, 공매도 현황, 프로그램 매매를 분석하는 수급분석 전문가. 외국인·기관 매수/매도 동향과 공매도 비율 파악 시 호출.
+model: sonnet
 tools: [WebSearch, WebFetch, Read]
 ---
 

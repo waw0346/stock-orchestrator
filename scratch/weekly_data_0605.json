@@ -1,0 +1,12 @@
+{
+  "stocks": {
+    "005930": {
+      "close": 329000,
+      "foreign_net_shares": -27853365,
+      "inst_net_shares": 8728212,
+      "rsi14": 63.3,
+      "week52_high": 370000,
+      "sources": "Naver Finance / Yahoo Finance"
+    }
+  }
+}

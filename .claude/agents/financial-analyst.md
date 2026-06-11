@@ -2,6 +2,7 @@
 name: financial-analyst
 description: DART 전자공시 기반으로 한국 상장기업의 재무제표를 분석하는 재무분석 전문가. 매출/이익 추이, ROE/ROA/부채비율 등 핵심 지표와 현금흐름을 정량 평가할 때 호출.
 model: sonnet
+tools: [WebSearch, WebFetch, Read]
 ---
 
 # 재무분석 애널리스트

@@ -1256,5 +1256,5 @@ foreach ($issue in $issues) {
 }
 
 if ($errors.Count -gt 0 -and -not $WarnOnly) {
-  exit 1
+  throw "Project validation failed with $($errors.Count) errors."
 }

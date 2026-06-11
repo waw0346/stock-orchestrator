@@ -1,8 +1,8 @@
 # Current Project State
 
-기준일: 2026-06-05
+기준일: 2026-06-11
 
-이 파일은 현재 운영 기준을 빠르게 확인하기 위한 상태표입니다. 혼동이 생기면 이 파일과 `README.md`, `CLAUDE.md`를 우선합니다.
+이 파일은 현재 운영 기준을 빠르게 확인하기 위한 상태표입니다. 내용 충돌 시 `CLAUDE.md` 및 `INVESTMENT_POLICY.md`가 최우선 기준입니다. 이 파일은 참고용 현황 요약이며 자동 갱신되지 않습니다.
 
 ## Canonical Files
 
@@ -23,7 +23,7 @@
 - `CLAUDE_v2.md`
 - `00_setup_guide.md`
 - `01_project_instructions.md`
-- `.claude/agents/kfc/` — 과거 설계 스펙 보관본
+- `.claude/agents/kfc/` — 과거 설계 스펙 보관본 (서브폴더에 위치, 에이전트로 자동 인식되지 않음. 정식 아카이브: `docs/archive/kfc/`)
 
 ## Active Agent Groups
 

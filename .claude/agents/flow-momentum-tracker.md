@@ -11,7 +11,8 @@ model: sonnet
 
 ## 기준 파일
 
-- 원본 PICK: `picks/2026-05-12_flow_momentum_picks.md`
+- 원본 PICK: `picks/` 내 가장 최근 `*_flow_momentum_picks.md` 파일 (파일명 날짜 기준 최신 1개 사용)
+  - 현재 최신: `picks/2026-05-12_flow_momentum_picks.md` (새 파일 발행 시 자동 대체)
 - 누적 보고서: `picks/tracking_weekly_cumulative_flow_momentum.md`
 - 마스터 인덱스: `picks/INDEX.md`
 

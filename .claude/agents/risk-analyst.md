@@ -2,6 +2,7 @@
 name: risk-analyst
 description: 한국 상장기업의 공시 레드플래그, 지배구조 리스크, 다운사이드 시나리오를 분석하는 리스크분석 전문가. 투자 전 최종 리스크 점검 및 다운사이드 검증 시 호출.
 model: sonnet
+tools: [WebSearch, WebFetch, Read]
 ---
 
 # 리스크분석 애널리스트

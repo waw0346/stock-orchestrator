@@ -24,7 +24,7 @@
 | "미국장 마감" / "익일 한국 관련주" | us-close-korea-strategist |
 | "장전 외국인" / "preopen foreign" / "8시30분 수급" | preopen-foreign-scanner |
 | "테마 분석" / "오늘 테마" | theme-tracker |
-| "장전/장중/장후 시황" / "시장 레이더" | `scripts/run_market_radar.ps1 -Mode preopen\|intraday\|after_close` |
+| "장전/장중/장후 시황" / "시장 레이더" | Windows: `scripts/run_market_radar.ps1 -Mode preopen\|intraday\|after_close` / Linux·Claude: `python scripts/run_market_radar.py --mode preopen\|intraday\|after_close` |
 | "현재 픽 목록" | picks/INDEX.md 읽어 표 출력 |
 | "오늘 시세 ○○" | WebSearch 직접 |
 | "구조 점검" / "메타인지" | metacognitive-analyst |
@@ -36,11 +36,13 @@
 
 ### Phase 0 — 종목 식별 & 깊이 판단
 
-| 조건 | 깊이 | 에이전트 |
-|------|------|---------|
-| 처음 분석 / "풀 분석" | Deep | 6개 전체 |
-| "간단히" / 재점검 | Light | 재무+모멘텀 |
-| 특정 분야만 | Single | 1개 |
+| 조건 | 깊이 | 에이전트 구성 |
+|------|------|-------------|
+| 처음 분석 / "풀 분석" | Deep | 분석 5개(Phase 1+2 병렬) + risk-analyst 1개(Phase 3 순차) |
+| "간단히" / 재점검 | Light | financial-analyst + momentum-analyst (2개만) |
+| 특정 분야만 | Single | 해당 에이전트 1개 |
+
+> **에이전트 구조**: 분석 5개(company/industry/flow/financial/momentum) → risk-analyst → Capital Gate(market-regime→portfolio→position-sizing) 순서. Phase 1+2는 병렬, 이후는 순차.
 
 캐시 확인: `picks/cache/[종목코드]_dart_*.json` 있으면 재무분석 에이전트에 경로 전달.
 
@@ -65,7 +67,15 @@ JSON 결과를 압축 요약(findings + key_metrics + risk_candidates)으로 변
 3. @position-sizing-analyst → 포지션 크기 + 손절 시 손실
 4. `docs/pre_trade_checklist.md` → Hard Block 확인
 
-**BLOCK 규칙**: market-regime Risk-Off 저허용 / portfolio-manager BLOCK / position-sizing BLOCK / Hard Block 1개 이상 → 픽 저장 금지. BLOCK 시 INDEX.md Capital Gate BLOCK 섹션에 즉시 등록.
+> ⚠️ **실행 순서 필수**: market-regime 결과(Regime JSON)를 portfolio-manager·position-sizing-analyst 프롬프트에 직접 전달해야 하므로 반드시 순차 실행. 병렬 실행 시 portfolio-manager가 시장 국면 없이 판단하는 오류 발생.
+
+**BLOCK 규칙**:
+- `market-regime` → **Risk-Off**: 신규 픽 BLOCK (HOLD 허용 불가, 전면 차단)
+- `portfolio-manager` → **BLOCK**: 픽 저장 금지
+- `position-sizing-analyst` → **BLOCK**: 픽 저장 금지
+- `pre_trade_checklist` Hard Block 1개 이상: 픽 저장 금지
+
+위 중 하나라도 해당 → 픽 저장 금지. BLOCK 시 INDEX.md Capital Gate BLOCK 섹션에 즉시 등록.
 
 리포트 필수 문구:
 ```
@@ -77,7 +87,7 @@ Market Regime: Risk-On|Neutral|Risk-Off
 
 ### Phase 4 — 종합의견 작성
 
-6개 에이전트 JSON + Gate 결과 종합. 리포트 템플릿: `docs/pick_report_template.md`
+분석 에이전트 5개(Phase 1+2) + risk-analyst(Phase 3) JSON + Capital Gate 결과 종합. 리포트 템플릿: `docs/pick_report_template.md`
 
 ### Phase 5 — 저장
 
@@ -94,7 +104,7 @@ Market Regime: Risk-On|Neutral|Risk-Off
 |------|---------|----------|
 | 주간 추적 | weekly-tracker | picks/*.md |
 | 월간 추적 | monthly-tracker | picks/*.md |
-| 수급·모멘텀 추적 (flow momentum weekly) | @flow-momentum-tracker | picks/2026-05-12_flow_momentum_picks.md → picks/tracking_weekly_cumulative_flow_momentum.md |
+| 수급·모멘텀 추적 (flow momentum weekly) | @flow-momentum-tracker | picks/ 내 최신 flow_momentum_picks 파일 → picks/tracking_weekly_cumulative_flow_momentum.md |
 | 진입·청산 타이밍 (entry exit timing) | @entry-exit-timing-strategist | picks/entry_exit_timing_playbook.md |
 | 테마 추적 | theme-tracker | picks/cache/candidate_board.json → picks/theme_report.md |
 | 미장 마감 전략 | @us-close-korea-strategist | → picks/WATCHLIST.md (갭 +5% 추격 BLOCK) |
