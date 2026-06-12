@@ -26,6 +26,9 @@ from typing import Any, Dict, List, Optional
 from xml.etree import ElementTree
 from pydantic import BaseModel, Field, field_validator
 
+from lib.env import read_env_file_value
+from lib.universe import parse_index_rows
+
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_INDEX = ROOT / "picks" / "INDEX.md"
@@ -120,21 +123,12 @@ def default_business_year() -> str:
 
 def parse_tickers_from_index(path: Path) -> Dict[str, str]:
     """Read non-closed ticker/name pairs from picks/INDEX.md."""
-    tickers: Dict[str, str] = {}
-    if not path.exists():
-        return tickers
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if not re.match(r"^\|\s*20\d{2}-\d{2}-\d{2}\s*\|", line):
-            continue
-        columns = [column.strip() for column in line.split("|")]
-        if len(columns) < 10:
-            continue
-        ticker = columns[2]
-        name = columns[3]
-        status = columns[9]
-        if re.match(r"^\d{6}$", ticker) and not status.startswith(("closed", "completed")):
-            tickers[ticker] = name
-    return tickers
+    rows = parse_index_rows(path)
+    return {
+        row["ticker"]: row["name"]
+        for row in rows
+        if not row["status"].startswith(("closed", "completed"))
+    }
 
 
 def parse_tickers_from_rules(path: Path) -> Dict[str, str]:
@@ -246,20 +240,7 @@ def first_metric(indicators: Dict[str, Optional[float]], names: List[str]) -> Op
     return None
 
 
-def read_env_file_value(path: Path, key: str) -> str:
-    """Read a single KEY=value from a local env file without exporting it."""
-    if not path.exists():
-        return ""
-    for line in path.read_text(encoding="utf-8").splitlines():
-        text = line.strip()
-        if not text or text.startswith("#") or "=" not in text:
-            continue
-        name, value = text.split("=", 1)
-        if name.strip() != key:
-            continue
-        value = value.strip().strip('"').strip("'")
-        return value
-    return ""
+
 
 
 def offline_item(ticker: str, name: str, date: str) -> Dict[str, Any]:

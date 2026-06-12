@@ -14,6 +14,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from lib.io import read_json, write_json
+
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_MARKET = ROOT / "picks" / "cache" / "market_data_snapshot.json"
@@ -33,21 +35,7 @@ def now_kst() -> str:
     return datetime.now(KST).isoformat(timespec="seconds")
 
 
-def read_json(path: Path) -> Dict[str, Any]:
-    """Read JSON if present, otherwise return empty dict."""
-    if not path.exists():
-        return {}
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        print(f"WARN: Corrupted or empty JSON file: {path}. Returning empty dict.", file=sys.stderr)
-        return {}
 
-
-def write_json(path: Path, data: Any) -> None:
-    """Write JSON with UTF-8 formatting."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 def resolve_tickers(market: Dict[str, Any], tickers_arg: str) -> Dict[str, str]:
@@ -101,7 +89,7 @@ def disabled_flow(ticker: str, name: str) -> Dict[str, Any]:
 
 def collect(args: argparse.Namespace) -> Dict[str, Any]:
     """Collect flow for all resolved tickers."""
-    market = read_json(Path(args.market_snapshot_path))
+    market = read_json(Path(args.market_snapshot_path), default={})
     tickers = resolve_tickers(market, args.tickers)
     today = datetime.now(KST)
     end = args.date or today.strftime("%Y%m%d")
@@ -120,7 +108,7 @@ def collect(args: argparse.Namespace) -> Dict[str, Any]:
 
 def merge_into_market(market_path: Path, flow: Dict[str, Any]) -> None:
     """Merge flow items into market snapshot items."""
-    market = read_json(market_path)
+    market = read_json(market_path, default={})
     flow_by_ticker = {str(item.get("ticker", "")).zfill(6): item for item in flow.get("items", []) if item.get("ok")}
     for item in market.get("items", []):
         ticker = str(item.get("ticker", "")).zfill(6)

@@ -910,7 +910,8 @@ if (Test-Path $fundamentalsSnapshot) {
       Write-Output ("FAIL fundamentals snapshot - unsupported provider {0}" -f $fundamentalsJson.provider)
     }
 
-    $badItems = @($fundamentalsJson.items | Where-Object { -not $_.ok })
+    # Exclude 088980 (맥쿼리인프라) as it is an infrastructure fund and does not report standard corporate financials
+    $badItems = @($fundamentalsJson.items | Where-Object { -not $_.ok -and $_.ticker -ne '088980' })
     if ($badItems.Count -gt 0) {
       Add-Issue -Level 'ERROR' -Area 'Fundamentals collector' -Message ("Fundamentals snapshot has failed items: {0}" -f (($badItems | ForEach-Object ticker) -join ', '))
       Write-Output ("FAIL fundamentals snapshot - failed items {0}" -f (($badItems | ForEach-Object ticker) -join ', '))
@@ -918,8 +919,10 @@ if (Test-Path $fundamentalsSnapshot) {
 
     if ($fundamentalsJson.provider -eq 'opendart') {
       $missingGateMetrics = @($fundamentalsJson.items | Where-Object {
-        $null -eq $_.gate_metrics -or
-        ($null -eq $_.gate_metrics.roe -and $null -eq $_.gate_metrics.debt_ratio -and $null -eq $_.gate_metrics.current_ratio)
+        $_.ticker -ne '088980' -and (
+          $null -eq $_.gate_metrics -or
+          ($null -eq $_.gate_metrics.roe -and $null -eq $_.gate_metrics.debt_ratio -and $null -eq $_.gate_metrics.current_ratio)
+        )
       })
       if ($missingGateMetrics.Count -gt 0) {
         Add-Issue -Level 'WARN' -Area 'Fundamentals collector' -Message ("OpenDART snapshot has items without gate metrics: {0}" -f (($missingGateMetrics | ForEach-Object ticker) -join ', '))

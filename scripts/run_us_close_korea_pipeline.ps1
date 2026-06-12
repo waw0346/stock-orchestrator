@@ -184,7 +184,7 @@ Write-Host "--------------------------------------------------" -ForegroundColor
 
 if (Test-Path $alertsFile) {
     try {
-        $alertsJson = Get-Content $alertsFile -Raw | ConvertFrom-Json
+        $alertsJson = Get-Content $alertsFile -Encoding UTF8 -Raw | ConvertFrom-Json
         if ($alertsJson.issues -and $alertsJson.issues.Count -gt 0) {
             Write-Host "Total $($alertsJson.issues.Count) issues/alerts are active:" -ForegroundColor Yellow
             foreach ($issue in $alertsJson.issues) {
@@ -211,7 +211,7 @@ Write-Host "--------------------------------------------------" -ForegroundColor
 $metaActivityFile = Join-Path $projectRoot "picks/alerts/metacognitive_activity.json"
 if (Test-Path $metaActivityFile) {
     try {
-        $metaJson = Get-Content $metaActivityFile -Raw | ConvertFrom-Json
+        $metaJson = Get-Content $metaActivityFile -Encoding UTF8 -Raw | ConvertFrom-Json
         $scannedMsg = "Total files scanned: " + $metaJson.scanned_files_count
         Write-Host $scannedMsg -ForegroundColor White
         $recentMsg = "Recent 24h activity logs: " + $metaJson.recent_activity_count

@@ -14,6 +14,8 @@ import urllib.request
 from pathlib import Path
 from typing import Dict
 
+from lib.env import read_env_file_value
+
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_ENV_FILE = ROOT / ".env.local"
@@ -30,18 +32,7 @@ def configure_stdio() -> None:
             stream.reconfigure(encoding="utf-8")
 
 
-def read_env_file_value(path: Path, key: str) -> str:
-    """Read a single KEY=value from a local env file without exporting it."""
-    if not path.exists():
-        return ""
-    for line in path.read_text(encoding="utf-8").splitlines():
-        text = line.strip()
-        if not text or text.startswith("#") or "=" not in text:
-            continue
-        name, value = text.split("=", 1)
-        if name.strip() == key:
-            return value.strip().strip('"').strip("'")
-    return ""
+
 
 
 def fiscal_request(company_key: str, api_key: str, timeout: int) -> Dict:

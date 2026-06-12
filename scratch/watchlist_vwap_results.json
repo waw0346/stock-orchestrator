@@ -1,0 +1,29 @@
+{
+  "005930": {
+    "streak": 7,
+    "total_net_buy": 280962,
+    "latest_close": 331000,
+    "latest_date": "2026-06-12",
+    "p_vwap": 331000.0,
+    "p_intensity": 331000.0,
+    "p_value_vwap": 331000.0
+  },
+  "402340": {
+    "streak": 7,
+    "total_net_buy": 43961,
+    "latest_close": 1251000,
+    "latest_date": "2026-06-12",
+    "p_vwap": 1251000.0,
+    "p_intensity": 1251000.0,
+    "p_value_vwap": 1251000.0
+  },
+  "000660": {
+    "streak": 4,
+    "total_net_buy": 15564,
+    "latest_close": 2120000,
+    "latest_date": "2026-06-12",
+    "p_vwap": 2120000.0,
+    "p_intensity": 2120000.0,
+    "p_value_vwap": 2120000.0
+  }
+}

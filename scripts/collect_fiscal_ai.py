@@ -18,6 +18,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List
 
+from lib.env import read_env_file_value
+
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_ENV_FILE = ROOT / ".env.local"
@@ -42,18 +44,7 @@ def now_kst() -> str:
     return datetime.now(KST).isoformat(timespec="seconds")
 
 
-def read_env_file_value(path: Path, key: str) -> str:
-    """Read a single KEY=value from a local env file without exporting it."""
-    if not path.exists():
-        return ""
-    for line in path.read_text(encoding="utf-8").splitlines():
-        text = line.strip()
-        if not text or text.startswith("#") or "=" not in text:
-            continue
-        name, value = text.split("=", 1)
-        if name.strip() == key:
-            return value.strip().strip('"').strip("'")
-    return ""
+
 
 
 def write_json(path: Path, data: Any) -> None:
