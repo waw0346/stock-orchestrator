@@ -45,6 +45,18 @@ function Read-FrontMatter {
   return $data
 }
 
+function Normalize-PickStatus {
+  param([string]$Status)
+
+  if ([string]::IsNullOrWhiteSpace($Status)) {
+    return ''
+  }
+  if ($Status -match '^(active|watch|closed|completed|blocked)') {
+    return $matches[1]
+  }
+  return $Status.Trim()
+}
+
 function Get-GitStatusLines {
   Push-Location $root
   try {
@@ -70,12 +82,19 @@ $criticalPatterns = @(
   '^CLAUDE\.md$',
   '^README\.md$',
   '^CURRENT_STATE\.md$',
+  '^AGENTS\.md$',
   '^\.gitignore$',
   '^\.mcp\.json$',
+  '^\.github/workflows/.*\.yml$',
   '^INVESTMENT_POLICY\.md$',
   '^docs/pre_trade_checklist\.md$',
+  '^docs/(ai_runtime_adapter|context_summary|scripts_lib_refactor_candidates)\.md$',
+  '^scripts/(bootstrap|check_runtime_contract|summarize_context)\.(py|ps1)$',
+  '^scripts/lib/.*\.py$',
+  '^scripts/generate_vwap_anchors\.py$',
   '^scripts/(validate_project|review_changes)\.ps1$',
   '^tests/.*\.ps1$',
+  '^tests/run_cross_platform_smoke\.py$',
   '^tests/run_all_tests\.ps1$',
   '^\.claude/agents/(market-regime-analyst|portfolio-manager|position-sizing-analyst|performance-reviewer|us-close-korea-strategist)\.md$'
 )
@@ -84,27 +103,42 @@ $archivedDocPatterns = @(
 )
 $operatingDataPatterns = @(
   '^picks/20.*\.md$',
+  '^picks/analysis/20.*\.md$',
   '^picks/INDEX\.md$',
   '^picks/WATCHLIST\.md$',
   '^picks/dashboard\.html$',
+  '^picks/paper_price_snapshot\.json$',
   '^picks/tracking_.*\.md$',
   '^picks/entry_exit_timing_playbook.*\.md$',
   '^picks/postmortems/.*'
 )
 $localNoisePatterns = @(
   '^\.claude/settings\.local\.json$',
+  '^\.claude/agents/.*\.test$',
   '^picks/cache/.*\.json$',
+  '^picks/cache/.*\.jsonl$',
   '^picks/alerts/.*\.json$',
+  '^.*\.test$',
   '^.*\.test\.(json|csv)$'
 )
 
 foreach ($line in $statusLines) {
+  $changeCode = $line.Substring(0, 2)
   $path = $line.Substring(3).Trim()
   $normalized = $path -replace '\\', '/'
+  if ($normalized -eq 'scripts/lib/') {
+    $normalized = 'scripts/lib'
+  }
   if ($localNoisePatterns | Where-Object { $normalized -match $_ }) {
-    Add-Issue -Level 'WARN' -Area 'Change classification' -Message ("Local/transient file should not be committed: {0}" -f $path)
-    Write-Output ("WARN local/transient {0}" -f $path)
+    if ($changeCode -match 'D') {
+      Write-Output ("OK   local/transient cleanup {0}" -f $path)
+    } else {
+      Add-Issue -Level 'WARN' -Area 'Change classification' -Message ("Local/transient file should not be committed: {0}" -f $path)
+      Write-Output ("WARN local/transient {0}" -f $path)
+    }
   } elseif ($criticalPatterns | Where-Object { $normalized -match $_ }) {
+    Write-Output ("OK   governance change {0}" -f $path)
+  } elseif ($normalized -eq 'scripts/lib') {
     Write-Output ("OK   governance change {0}" -f $path)
   } elseif ($archivedDocPatterns | Where-Object { $normalized -match $_ }) {
     Write-Output ("OK   archived guidance marker {0}" -f $path)
@@ -152,13 +186,14 @@ foreach ($pick in Get-ChildItem -Path $pickDir -Filter '20*.md') {
     continue
   }
 
-  $status = $fm['status']
+  $rawStatus = $fm['status']
+  $status = Normalize-PickStatus $rawStatus
   $name = $fm['name']
   $text = Get-Content -Path $pick.FullName -Raw -Encoding UTF8
 
   if ($status -notin @('active', 'watch', 'closed', 'completed')) {
-    Add-Issue -Level 'ERROR' -Area 'Pick risk guard' -Message ("Unknown pick status: {0} {1} status={2}" -f $ticker, $name, $status)
-    Write-Output ("FAIL {0} {1} unknown status {2}" -f $ticker, $name, $status)
+    Add-Issue -Level 'ERROR' -Area 'Pick risk guard' -Message ("Unknown pick status: {0} {1} status={2}" -f $ticker, $name, $rawStatus)
+    Write-Output ("FAIL {0} {1} unknown status {2}" -f $ticker, $name, $rawStatus)
   }
 
   if ($status -eq 'active' -and $text -match 'Critical' -and $text -notmatch 'Capital Protection Gate') {

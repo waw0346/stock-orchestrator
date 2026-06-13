@@ -15,6 +15,9 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+from lib.io import read_json, write_json
+from lib.status import normalize_pick_status
+
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_INDEX = ROOT / "picks" / "INDEX.md"
@@ -53,11 +56,7 @@ def parse_entry_range(text: str) -> Tuple[Optional[int], Optional[int]]:
     return None, None
 
 
-def normalize_status(status: str) -> str:
-    """Normalize status with warning glyphs."""
-    status = str(status).strip()
-    match = re.match(r"^(active|watch|closed|completed)", status)
-    return match.group(1) if match else status
+
 
 
 def parse_index(path: Path) -> List[Dict[str, Any]]:
@@ -78,7 +77,7 @@ def parse_index(path: Path) -> List[Dict[str, Any]]:
         columns = [column.strip() for column in line.split("|")]
         if len(columns) < 11:
             continue
-        status = normalize_status(columns[9])
+        status = normalize_pick_status(columns[9])
         if status not in {"active", "watch"}:
             continue
         entry_low, entry_high = parse_entry_range(columns[6])
@@ -99,15 +98,7 @@ def parse_index(path: Path) -> List[Dict[str, Any]]:
     return rows
 
 
-def read_json(path: Path) -> Dict[str, Any]:
-    """Read JSON if present, otherwise return empty dict."""
-    if not path.exists():
-        return {}
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        print(f"WARN: Corrupted or empty JSON file: {path}. Returning empty dict.", file=sys.stderr)
-        return {}
+
 
 
 def as_float(value: Any) -> Optional[float]:
@@ -205,7 +196,14 @@ def score_flow(market_item: Optional[Dict[str, Any]], notes: List[str], gaps: Li
     return 0
 
 
-def score_pullback(row: Dict[str, Any], market_item: Optional[Dict[str, Any]], rsi_max: float = 75.0, sharp_drop_max: float = -20.0) -> Dict[str, Any]:
+def score_pullback(
+    row: Dict[str, Any],
+    market_item: Optional[Dict[str, Any]],
+    rsi_max: float = 75.0,
+    sharp_drop_max: float = -20.0,
+    basis_risk_level: str = "NORMAL",
+    avg_basis_15m: float = 0.0
+) -> Dict[str, Any]:
     """Score one row with conservative available-data pullback checks."""
     ticker = row["ticker"]
     price = market_item.get("price") if market_item else row.get("index_price")
@@ -265,6 +263,11 @@ def score_pullback(row: Dict[str, Any], market_item: Optional[Dict[str, Any]], r
         block_reasons.append("rsi_overheated")
     elif 45 <= rsi14 <= 60:
         notes.append("RSI14 is in pullback support range")
+
+    # Apply Futures Basis Gate Filter
+    if basis_risk_level == "HIGH" or avg_basis_15m <= -2.0:
+        block_reasons.append("futures_basis_backwardation")
+        notes.append(f"선물 베이시스 위험 감지 (15분 평균: {avg_basis_15m:.3f}). 프로그램 매도 우려로 진입 제한.")
 
     known_signal_count = len([score for score in signals.values() if score > 0])
     total = sum(signals.values())
@@ -333,7 +336,7 @@ def offline_market_snapshot() -> Dict[str, Any]:
 def run(args: argparse.Namespace) -> Dict[str, Any]:
     """Run pullback screen."""
     rows = parse_index(Path(args.index_path))
-    market = offline_market_snapshot() if args.offline_sample else read_json(Path(args.market_snapshot_path))
+    market = offline_market_snapshot() if args.offline_sample else read_json(Path(args.market_snapshot_path), default={})
     by_ticker = market_by_ticker(market)
     
     # Load dynamic rules if available
@@ -350,7 +353,30 @@ def run(args: argparse.Namespace) -> Dict[str, Any]:
         except Exception as exc:
             print(f"Warning: Failed to load dynamic rules config: {exc}", file=sys.stderr)
             
-    results = [score_pullback(row, by_ticker.get(row["ticker"]), rsi_max=rsi_max, sharp_drop_max=sharp_drop_max) for row in rows]
+    # Load broadcast basis status
+    status_path = ROOT / "picks" / "cache" / "futures_monitor_status.json"
+    basis_risk_level = "NORMAL"
+    avg_basis_15m = 0.0
+    if status_path.exists():
+        try:
+            status_data = json.loads(status_path.read_text(encoding="utf-8"))
+            basis_risk_level = status_data.get("risk_level", "NORMAL")
+            avg_basis_15m = status_data.get("avg_basis_15m", 0.0)
+            print(f"Loaded futures basis status: risk_level={basis_risk_level}, 15m_avg={avg_basis_15m:.3f}", file=sys.stderr)
+        except Exception as exc:
+            print(f"Warning: Failed to load futures basis status: {exc}", file=sys.stderr)
+
+    results = [
+        score_pullback(
+            row,
+            by_ticker.get(row["ticker"]),
+            rsi_max=rsi_max,
+            sharp_drop_max=sharp_drop_max,
+            basis_risk_level=basis_risk_level,
+            avg_basis_15m=avg_basis_15m
+        )
+        for row in rows
+    ]
     return {
         "generated_at": now_kst(),
         "mode": "offline_sample" if args.offline_sample else "live",
@@ -369,10 +395,7 @@ def run(args: argparse.Namespace) -> Dict[str, Any]:
     }
 
 
-def write_json(path: Path, data: Any) -> None:
-    """Write JSON with UTF-8 formatting."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
 
 
 def parse_args() -> argparse.Namespace:

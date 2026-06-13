@@ -15,6 +15,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from lib.io import read_json, write_json
+
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CANDIDATES = ROOT / "picks" / "cache" / "preopen_candidates.json"
@@ -35,21 +37,7 @@ def now_kst() -> str:
     return datetime.now(KST).isoformat(timespec="seconds")
 
 
-def read_json(path: Path) -> Dict[str, Any]:
-    """Read JSON if present, otherwise return empty dict."""
-    if not path.exists():
-        return {}
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        print(f"WARN: Corrupted or empty JSON file: {path}. Returning empty dict.", file=sys.stderr)
-        return {}
 
-
-def write_json(path: Path, data: Any) -> None:
-    """Write JSON with UTF-8 formatting."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 def market_by_ticker(market: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
@@ -143,8 +131,8 @@ def offline_market_snapshot() -> Dict[str, Any]:
 
 def run(args: argparse.Namespace) -> Dict[str, Any]:
     """Run the preopen filter."""
-    candidates = read_json(Path(args.candidates_path))
-    market = offline_market_snapshot() if args.offline_sample else read_json(Path(args.market_snapshot_path))
+    candidates = read_json(Path(args.candidates_path), default={})
+    market = offline_market_snapshot() if args.offline_sample else read_json(Path(args.market_snapshot_path), default={})
     by_ticker = market_by_ticker(market)
     filtered = [
         decision_for_candidate(candidate, by_ticker.get(str(candidate.get("ticker", "")).zfill(6)), args.require_foreign)

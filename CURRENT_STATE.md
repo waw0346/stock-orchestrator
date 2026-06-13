@@ -1,6 +1,6 @@
 # Current Project State
 
-기준일: 2026-06-11
+기준일: 2026-06-12
 
 이 파일은 현재 운영 기준을 빠르게 확인하기 위한 상태표입니다. 내용 충돌 시 `CLAUDE.md` 및 `INVESTMENT_POLICY.md`가 최우선 기준입니다. 이 파일은 참고용 현황 요약이며 자동 갱신되지 않습니다.
 
@@ -10,10 +10,17 @@
 - `CLAUDE.md` — 최신 오케스트레이터 운영 지침
 - `INVESTMENT_POLICY.md` — 최상위 투자 운영 정책
 - `docs/pre_trade_checklist.md` — 신규 픽 발행 전 체크리스트
+- `docs/deca_system_spec.md` — DECA 실시간 모니터 및 모의투자 시스템 사양서
 - `.mcp.json` — PlayMCP 프로젝트 MCP 설정
 - `scripts/validate_project.ps1` — 운영 구조 검증
 - `scripts/review_changes.ps1` — 변경사항 위험도 점검
 - `tests/run_all_tests.ps1` — 전체 검증 루틴
+
+## DECA (실시간 모니터 및 모의투자) 스킬
+- `scripts/generate_vwap_anchors.py` — VWAP 기준 평단가 닻 생성기
+- `scripts/check_morning_disclosure.py` — 장전 공시 악재 블랙리스트 생성기
+- `scripts/realtime_stock_monitor.py` — 실시간 감시 및 가상 매매 체결 엔진
+- `scripts/check_deca_trigger.py` — 실시간 뉴스 및 공시 인지형 검증 스크립트
 
 ## Archived Files
 
@@ -49,6 +56,7 @@
 - `position-sizing-analyst`
 - `performance-reviewer`
 - `metacognitive-analyst`
+- `deca-analyst` — DECA 실시간 인지형 감사 에이전트
 
 스크리닝:
 - `preopen-foreign-scanner`
@@ -56,6 +64,7 @@
 
 기록/DB:
 - `obsi` — Obsidian Vault 기록, 오류 메모, 실행 로그, Todo 분류 관리
+
 
 ## Current Risk Controls
 

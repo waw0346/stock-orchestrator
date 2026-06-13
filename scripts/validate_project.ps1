@@ -140,7 +140,7 @@ if (Test-Path $obsiAgent) {
 
 if (Test-Path $gitignoreFile) {
   $gitignoreText = Get-Content -Path $gitignoreFile -Raw -Encoding UTF8
-  if ($gitignoreText -match '(?m)^obsidian/$') {
+  if ($gitignoreText -match '(?m)^obsidian/\r?$') {
     Write-Output 'OK   .gitignore obsidian/'
   } else {
     Add-Issue -Level 'ERROR' -Area 'Obsidian record DB' -Message '.gitignore must exclude obsidian/'
@@ -910,7 +910,8 @@ if (Test-Path $fundamentalsSnapshot) {
       Write-Output ("FAIL fundamentals snapshot - unsupported provider {0}" -f $fundamentalsJson.provider)
     }
 
-    $badItems = @($fundamentalsJson.items | Where-Object { -not $_.ok })
+    # Exclude 088980 (맥쿼리인프라) as it is an infrastructure fund and does not report standard corporate financials
+    $badItems = @($fundamentalsJson.items | Where-Object { -not $_.ok -and $_.ticker -ne '088980' })
     if ($badItems.Count -gt 0) {
       Add-Issue -Level 'ERROR' -Area 'Fundamentals collector' -Message ("Fundamentals snapshot has failed items: {0}" -f (($badItems | ForEach-Object ticker) -join ', '))
       Write-Output ("FAIL fundamentals snapshot - failed items {0}" -f (($badItems | ForEach-Object ticker) -join ', '))
@@ -918,8 +919,10 @@ if (Test-Path $fundamentalsSnapshot) {
 
     if ($fundamentalsJson.provider -eq 'opendart') {
       $missingGateMetrics = @($fundamentalsJson.items | Where-Object {
-        $null -eq $_.gate_metrics -or
-        ($null -eq $_.gate_metrics.roe -and $null -eq $_.gate_metrics.debt_ratio -and $null -eq $_.gate_metrics.current_ratio)
+        $_.ticker -ne '088980' -and (
+          $null -eq $_.gate_metrics -or
+          ($null -eq $_.gate_metrics.roe -and $null -eq $_.gate_metrics.debt_ratio -and $null -eq $_.gate_metrics.current_ratio)
+        )
       })
       if ($missingGateMetrics.Count -gt 0) {
         Add-Issue -Level 'WARN' -Area 'Fundamentals collector' -Message ("OpenDART snapshot has items without gate metrics: {0}" -f (($missingGateMetrics | ForEach-Object ticker) -join ', '))
@@ -1241,6 +1244,80 @@ foreach ($relative in $capitalAgents) {
     if ($agentText -notmatch '```json') {
       Add-Issue -Level 'ERROR' -Area 'Capital protection gate' -Message ("Risk-control agent missing JSON contract: {0}" -f $relative)
       Write-Output ("FAIL {0} - missing JSON contract" -f $relative)
+    }
+  }
+}
+
+Write-Output ''
+Write-Output '== DECA VWAP anchors =='
+$vwapGenerator = Join-Path $root 'scripts/generate_vwap_anchors.py'
+$vwapTests = Join-Path $root 'tests/run_vwap_anchors_tests.ps1'
+foreach ($required in @($vwapGenerator, $vwapTests)) {
+  if (Test-Path $required) {
+    Write-Output ("OK   {0}" -f (Resolve-Path -Path $required -Relative))
+  } else {
+    Add-Issue -Level 'ERROR' -Area 'DECA VWAP anchors' -Message ("Missing VWAP anchor file: {0}" -f $required)
+    Write-Output ("FAIL {0} - missing" -f $required)
+  }
+}
+if (Test-Path $vwapGenerator) {
+  $vwapText = Get-Content -Path $vwapGenerator -Raw -Encoding UTF8
+  foreach ($requiredText in @('--include-live-naver', '--base-date', 'live_lookup_enabled')) {
+    if ($vwapText -notmatch [regex]::Escape($requiredText)) {
+      Add-Issue -Level 'ERROR' -Area 'DECA VWAP anchors' -Message ("VWAP generator missing portable option: {0}" -f $requiredText)
+      Write-Output ("FAIL vwap generator - missing {0}" -f $requiredText)
+    }
+  }
+}
+
+Write-Output ''
+Write-Output '== AI runtime portability =='
+$runtimeFiles = @(
+  'AGENTS.md',
+  'docs/ai_runtime_adapter.md',
+  'docs/context_summary.md',
+  'scripts/bootstrap.py',
+  'scripts/bootstrap.ps1',
+  'scripts/check_runtime_contract.py',
+  'scripts/summarize_context.py',
+  'scripts/lib/__init__.py',
+  'scripts/lib/env.py',
+  'scripts/lib/io.py',
+  'scripts/lib/status.py',
+  'scripts/lib/universe.py',
+  'tests/run_bootstrap_tests.ps1',
+  'tests/run_runtime_contract_tests.ps1',
+  'tests/run_context_summary_tests.ps1',
+  'tests/run_cross_platform_smoke.py'
+)
+
+foreach ($relative in $runtimeFiles) {
+  $path = Join-Path $root $relative
+  if (Test-Path $path) {
+    Write-Output ("OK   {0}" -f (Resolve-Path -Path $path -Relative))
+  } else {
+    Add-Issue -Level 'ERROR' -Area 'AI runtime portability' -Message ("Missing runtime portability file: {0}" -f $relative)
+    Write-Output ("FAIL {0} - missing" -f $relative)
+  }
+}
+
+$runtimeContracts = @(
+  @{ Path = 'AGENTS.md'; Text = 'python scripts/summarize_context.py --ticker <ticker> --purpose risk|flow|market' },
+  @{ Path = 'docs/ai_runtime_adapter.md'; Text = 'Never treat cached data as live' },
+  @{ Path = 'docs/context_summary.md'; Text = 'Do not paste full DART/news/cache payloads' },
+  @{ Path = 'scripts/bootstrap.py'; Text = 'requirements_present' },
+  @{ Path = 'scripts/check_runtime_contract.py'; Text = 'TEXT_CONTRACTS' },
+  @{ Path = 'scripts/summarize_context.py'; Text = 'token_control' },
+  @{ Path = 'tests/run_cross_platform_smoke.py'; Text = 'test_context_summary_projection' }
+)
+
+foreach ($contract in $runtimeContracts) {
+  $path = Join-Path $root $contract.Path
+  if (Test-Path $path) {
+    $text = Get-Content -Path $path -Raw -Encoding UTF8
+    if ($text -notmatch [regex]::Escape($contract.Text)) {
+      Add-Issue -Level 'ERROR' -Area 'AI runtime portability' -Message ("Runtime portability contract missing text: {0} text={1}" -f $contract.Path, $contract.Text)
+      Write-Output ("FAIL {0} - missing {1}" -f $contract.Path, $contract.Text)
     }
   }
 }

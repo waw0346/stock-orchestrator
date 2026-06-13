@@ -33,6 +33,8 @@ foreach ($expectedSource in @(
   'Unknown pick status',
   'missing from INDEX',
   'Local/transient file should not be committed',
+  'scripts/lib',
+  'paper_price_snapshot\.json',
   'run_all_tests'
 )) {
   $reviewerText = Get-Content -Path $reviewer -Raw -Encoding UTF8

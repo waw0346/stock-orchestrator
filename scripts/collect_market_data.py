@@ -22,6 +22,8 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import quote
 from urllib.request import Request, urlopen
 
+from lib.universe import parse_index_rows
+
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SNAPSHOT = ROOT / "picks" / "cache" / "market_data_snapshot.json"
@@ -180,21 +182,12 @@ def calculate_rsi(closes: List[float], period: int = 14) -> Optional[float]:
 
 def parse_tickers_from_index(path: Path) -> Dict[str, str]:
     """Read tracked ticker/name pairs from picks/INDEX.md."""
-    tickers: Dict[str, str] = {}
-    if not path.exists():
-        return tickers
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if not re.match(r"^\|\s*20\d{2}-\d{2}-\d{2}\s*\|", line):
-            continue
-        columns = [column.strip() for column in line.split("|")]
-        if len(columns) < 10:
-            continue
-        ticker = columns[2]
-        name = columns[3]
-        status = columns[9]
-        if re.match(r"^\d{6}$", ticker) and not status.startswith(("closed", "completed")):
-            tickers[ticker] = name
-    return tickers
+    rows = parse_index_rows(path)
+    return {
+        row["ticker"]: row["name"]
+        for row in rows
+        if not row["status"].startswith(("closed", "completed"))
+    }
 
 
 def parse_tickers_from_rules(path: Path) -> Dict[str, str]:

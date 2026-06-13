@@ -1,8 +1,10 @@
 # 🏦 한국 주식 리서치 에이전트
 
-증권사 리서치팀 구조로 설계된 Claude Code 기반 한국 주식 분석 에이전트입니다.
-Anthropic의 [subagent 패턴](https://docs.claude.com/en/docs/claude-code/sub-agents)을 활용해
-시니어 애널리스트 한 명과 전문 분석, 추적, 포트폴리오 통제 에이전트로 팀을 구성했습니다.
+증권사 리서치팀 구조로 설계된 한국 주식 분석 오케스트레이터입니다.
+핵심 데이터 파이프라인은 Python/PowerShell 스크립트로 실행할 수 있고,
+Claude Code, Codex, 일반 CLI 같은 AI 환경은 이 파이프라인 위의 어댑터로 사용할 수 있습니다.
+Claude Code에서는 Anthropic의 [subagent 패턴](https://docs.claude.com/en/docs/claude-code/sub-agents)을 활용해
+시니어 애널리스트 한 명과 전문 분석, 추적, 포트폴리오 통제 에이전트로 팀을 구성합니다.
 
 ## 🎯 무엇을 할 수 있나요?
 
@@ -90,7 +92,25 @@ stock orchestrator/
 
 > 현재 기준을 빠르게 확인하려면 먼저 `CURRENT_STATE.md`를 읽으세요.
 
-### 1. Claude Code 설치
+### 1. 공통 Python 환경 점검
+
+새 AI 샌드박스, CI, 로컬 머신에서는 먼저 드라이런으로 환경을 점검합니다.
+
+```bash
+python scripts/bootstrap.py --dry-run --json
+python -m pip install -r requirements.txt
+python tests/run_cross_platform_smoke.py
+```
+
+PowerShell이 있는 Windows 환경에서는 전체 검증 루틴을 실행할 수 있습니다.
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tests\run_all_tests.ps1
+```
+
+AI 런타임별 도구 매핑은 `AGENTS.md`와 `docs\ai_runtime_adapter.md`를 확인하세요.
+
+### 2. Claude Code 설치
 
 ```bash
 # Node.js 18+ 필요
@@ -102,15 +122,15 @@ npm install -g @anthropic-ai/claude-code
 claude --version
 ```
 
-### 2. 프로젝트 디렉토리 준비
+### 3. 프로젝트 디렉토리 준비
 
 이 패키지를 원하는 위치에 압축 해제 후, 해당 디렉토리로 이동:
 
 ```bash
-cd "C:\Users\kjw03\Desktop\stock orchestrator"
+cd "<PROJECT_ROOT>"
 ```
 
-### 3. PlayMCP (DART 데이터) 연결
+### 4. PlayMCP (DART 데이터) 연결
 
 PlayMCP는 한국 DART 전자공시 데이터를 제공하는 원격 MCP 서버입니다.
 
@@ -129,7 +149,7 @@ claude mcp add --scope project playmcp \
 > 📝 **참고**: PlayMCP에 포함된 `opendart-*` 도구들이 한국 상장기업의
 > 재무제표·공시·주주현황 데이터를 가져오는 핵심입니다.
 
-### 4. 첫 실행
+### 5. 첫 실행
 
 ```bash
 claude
@@ -143,7 +163,7 @@ claude
 
 분석, 추적, 포트폴리오 통제 에이전트가 모두 보이면 정상입니다.
 
-### 5. 운영 점검
+### 6. 운영 점검
 
 현재 로컬 시간, KRX 정규장 여부, 에이전트 JSON 출력 계약, 추천픽 메타데이터를 점검합니다.
 
@@ -162,6 +182,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\review_changes.ps1
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File tests\run_all_tests.ps1
 ```
+
+`tests\run_all_tests.ps1`는 프로젝트 `.venv`가 있으면 해당 Python을 우선 사용합니다.
 
 GitHub Actions에서도 동일한 전체 검증 루틴을 실행합니다:
 
@@ -200,6 +222,14 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\collect_market_data.
 ```
 
 수집 결과는 `picks\cache\market_data_snapshot.json`에 저장되고, `-UpdatePaperPriceSnapshot` 옵션을 주면 `picks\paper_price_snapshot.json`도 갱신됩니다. 토스증권 공식 Open API는 사전신청/토큰 기반이므로 승인 후 `TOSS_INVEST_TOKEN`과 `TOSS_INVEST_QUOTE_URL_TEMPLATE`을 설정하면 보강 소스로 사용합니다. 자세한 운영 절차는 `docs\market_data_crawler.md`를 확인하세요.
+
+큰 캐시 파일을 에이전트 프롬프트에 직접 붙이지 말고 종목별 요약을 먼저 만들려면:
+
+```powershell
+python scripts\summarize_context.py --ticker 012450 --purpose risk
+```
+
+자세한 사용법은 `docs\context_summary.md`를 확인하세요.
 
 OpenDART 공시 기반 재무지표와 주요 계정값을 수집하려면 먼저 인증키를 환경변수로 설정하세요:
 

@@ -14,6 +14,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from lib.io import read_json, write_json
+
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_MARKET = ROOT / "picks" / "cache" / "market_data_snapshot.json"
@@ -37,21 +39,7 @@ def now_kst() -> str:
     return datetime.now(KST).isoformat(timespec="seconds")
 
 
-def read_json(path: Path) -> Dict[str, Any]:
-    """Read JSON if present, otherwise return empty dict."""
-    if not path.exists():
-        return {}
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        print(f"WARN: Corrupted or empty JSON file: {path}. Returning empty dict.", file=sys.stderr)
-        return {}
 
-
-def write_json(path: Path, data: Any) -> None:
-    """Write JSON with UTF-8 formatting."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 def validate_inputs_freshness(
@@ -63,7 +51,7 @@ def validate_inputs_freshness(
     for label, path in paths.items():
         if not path.exists():
             continue
-        data = read_json(path)
+        data = read_json(path, default={})
         generated_at_str = data.get("generated_at") or data.get("snapshot_time")
         if not generated_at_str:
             continue
@@ -222,11 +210,11 @@ def run(args: argparse.Namespace) -> Dict[str, Any]:
         "preopen": Path(args.preopen_filtered_path),
         "fundamentals": Path(args.fundamentals_path),
     })
-    market = read_json(Path(args.market_snapshot_path))
-    pullback = read_json(Path(args.pullback_path))
-    preopen = read_json(Path(args.preopen_filtered_path))
-    fundamentals = read_json(Path(args.fundamentals_path))
-    fiscal_ai_news = read_json(Path(args.fiscal_ai_news_path))
+    market = read_json(Path(args.market_snapshot_path), default={})
+    pullback = read_json(Path(args.pullback_path), default={})
+    preopen = read_json(Path(args.preopen_filtered_path), default={})
+    fundamentals = read_json(Path(args.fundamentals_path), default={})
+    fiscal_ai_news = read_json(Path(args.fiscal_ai_news_path), default={})
 
     market_by_ticker = by_ticker(market.get("items", []))
     pullback_by_ticker = by_ticker(pullback.get("candidates", []))

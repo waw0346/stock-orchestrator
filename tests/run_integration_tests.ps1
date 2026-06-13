@@ -202,7 +202,7 @@ if ($null -eq $crawlerJson.items[0].volume) {
   throw 'Market data crawler offline sample missing current volume'
 }
 
-$universeRun = & $crawler -SnapshotPath $crawlerUniverseOutput -OfflineSample 2>&1
+$universeRun = & $crawler -SnapshotPath $crawlerUniverseOutput -PreopenCandidatesPath $preopenOutput -OfflineSample 2>&1
 $universeExitCode = if ($null -eq $LASTEXITCODE) { 0 } else { $LASTEXITCODE }
 if ($universeExitCode -ne 0) {
   throw "Market data crawler universe offline sample failed with exit code $universeExitCode`n$($universeRun -join "`n")"
@@ -317,7 +317,7 @@ if (-not (Test-Path $fundamentalsOutput)) {
   throw 'Fundamentals collector did not create test snapshot'
 }
 
-$fundamentalsUniverseRun = & $fundamentals -Provider offline_sample -Date '20260602' -SnapshotPath $fundamentalsUniverseOutput 2>&1
+$fundamentalsUniverseRun = & $fundamentals -Provider offline_sample -Date '20260602' -SnapshotPath $fundamentalsUniverseOutput -PreopenCandidatesPath $preopenOutput 2>&1
 $fundamentalsUniverseExitCode = if ($null -eq $LASTEXITCODE) { 0 } else { $LASTEXITCODE }
 if ($fundamentalsUniverseExitCode -ne 0) {
   throw "Fundamentals collector universe offline sample failed with exit code $fundamentalsUniverseExitCode`n$($fundamentalsUniverseRun -join "`n")"
