@@ -22,3 +22,7 @@ Token rule:
 - Do not paste full DART/news/cache payloads into agent prompts.
 - Pass this summary JSON plus only the specific source link or file path needed for audit.
 - Increase `--max-items` or `--max-chars` only when a reviewer needs more evidence.
+
+Runtime rule:
+
+- If an AI runtime lacks subagents, pass this projection to the focused role prompt instead of copying operating cache files.

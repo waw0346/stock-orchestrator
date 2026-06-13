@@ -1256,6 +1256,7 @@ $runtimeFiles = @(
   'docs/context_summary.md',
   'scripts/bootstrap.py',
   'scripts/bootstrap.ps1',
+  'scripts/check_runtime_contract.py',
   'scripts/summarize_context.py',
   'scripts/lib/__init__.py',
   'scripts/lib/env.py',
@@ -1263,6 +1264,7 @@ $runtimeFiles = @(
   'scripts/lib/status.py',
   'scripts/lib/universe.py',
   'tests/run_bootstrap_tests.ps1',
+  'tests/run_runtime_contract_tests.ps1',
   'tests/run_context_summary_tests.ps1',
   'tests/run_cross_platform_smoke.py'
 )
@@ -1282,6 +1284,7 @@ $runtimeContracts = @(
   @{ Path = 'docs/ai_runtime_adapter.md'; Text = 'Never treat cached data as live' },
   @{ Path = 'docs/context_summary.md'; Text = 'Do not paste full DART/news/cache payloads' },
   @{ Path = 'scripts/bootstrap.py'; Text = 'requirements_present' },
+  @{ Path = 'scripts/check_runtime_contract.py'; Text = 'TEXT_CONTRACTS' },
   @{ Path = 'scripts/summarize_context.py'; Text = 'token_control' },
   @{ Path = 'tests/run_cross_platform_smoke.py'; Text = 'test_context_summary_projection' }
 )

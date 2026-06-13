@@ -2,6 +2,8 @@
 
 This project can be operated by different AI coding environments. Treat Claude Code subagents, Codex tools, browser/search tools, and plain CLI scripts as adapters around the same core workflow.
 
+`AGENTS.md` is the portable runtime contract. Runtime-specific files such as `CLAUDE.md` should point back here instead of redefining incompatible workflows.
+
 ## Core Rules
 
 - Read `CURRENT_STATE.md`, `CLAUDE.md`, and `INVESTMENT_POLICY.md` before changing operating logic.
@@ -9,6 +11,7 @@ This project can be operated by different AI coding environments. Treat Claude C
 - Use `python scripts/summarize_context.py --ticker <ticker> --purpose risk|flow|market` before ticker-level agent analysis.
 - Do not paste full DART, news, or `picks/cache/*.json` payloads into an agent prompt.
 - Run `python scripts/bootstrap.py --dry-run --json` in new environments before running the full suite.
+- Run `python scripts/check_runtime_contract.py --json` after editing runtime instructions.
 - If PowerShell is unavailable, run `python tests/run_cross_platform_smoke.py` as the portable minimum check.
 
 ## Tool Mapping
@@ -25,3 +28,4 @@ This project can be operated by different AI coding environments. Treat Claude C
 - Full Windows/PowerShell suite: `powershell -NoProfile -ExecutionPolicy Bypass -File tests\run_all_tests.ps1`
 - Portable smoke suite: `python tests/run_cross_platform_smoke.py`
 - Bootstrap dry run: `python scripts/bootstrap.py --dry-run --json`
+- Runtime contract: `python scripts/check_runtime_contract.py --json`

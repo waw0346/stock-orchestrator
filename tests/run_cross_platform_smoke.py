@@ -39,9 +39,16 @@ def test_context_summary_projection() -> None:
     assert data["index_rows"]
 
 
+def test_runtime_contract() -> None:
+    data = run_json([sys.executable, "scripts/check_runtime_contract.py", "--json"])
+    assert data["ok"], data["errors"]
+    assert "AGENTS.md" in data["required_files"]
+
+
 def main() -> int:
     test_bootstrap_dry_run()
     test_context_summary_projection()
+    test_runtime_contract()
     print("cross-platform smoke tests passed")
     return 0
 

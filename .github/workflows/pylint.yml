@@ -29,6 +29,7 @@ jobs:
       run: |
         python -m pylint --errors-only \
           scripts/bootstrap.py \
+          scripts/check_runtime_contract.py \
           scripts/summarize_context.py \
           scripts/lib \
           tests/run_cross_platform_smoke.py

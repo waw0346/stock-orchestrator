@@ -89,7 +89,7 @@ $criticalPatterns = @(
   '^INVESTMENT_POLICY\.md$',
   '^docs/pre_trade_checklist\.md$',
   '^docs/(ai_runtime_adapter|context_summary|scripts_lib_refactor_candidates)\.md$',
-  '^scripts/(bootstrap|summarize_context)\.(py|ps1)$',
+  '^scripts/(bootstrap|check_runtime_contract|summarize_context)\.(py|ps1)$',
   '^scripts/lib/.*\.py$',
   '^scripts/(validate_project|review_changes)\.ps1$',
   '^tests/.*\.ps1$',

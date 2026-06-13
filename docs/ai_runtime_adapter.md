@@ -2,6 +2,8 @@
 
 The repository has a Claude Code heritage, but its operating contract should remain portable across AI environments.
 
+Use `AGENTS.md` as the shared contract. Runtime-specific instructions should translate tool names and capabilities without changing the workflow order, cache rules, or verification gates.
+
 ## Runtime Layers
 
 | Layer | Portable contract | Claude Code adapter | Generic fallback |
@@ -21,6 +23,7 @@ Use this in a new machine, CI runner, or AI sandbox:
 
 ```bash
 python scripts/bootstrap.py --dry-run --json
+python scripts/check_runtime_contract.py --json
 python -m pip install -r requirements.txt
 python tests/run_cross_platform_smoke.py
 ```

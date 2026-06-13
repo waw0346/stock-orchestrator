@@ -34,6 +34,7 @@ $checks = @(
   @{ Name = 'validation tests'; Path = 'tests/run_validation_tests.ps1' },
   @{ Name = 'change review tests'; Path = 'tests/run_change_review_tests.ps1' },
   @{ Name = 'bootstrap tests'; Path = 'tests/run_bootstrap_tests.ps1' },
+  @{ Name = 'runtime contract tests'; Path = 'tests/run_runtime_contract_tests.ps1' },
   @{ Name = 'context summary tests'; Path = 'tests/run_context_summary_tests.ps1' },
   @{ Name = 'integration tests'; Path = 'tests/run_integration_tests.ps1' },
   @{ Name = 'kiwoom rest client tests'; Path = 'tests/run_kiwoom_rest_client_tests.ps1' },
