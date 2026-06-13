@@ -3,6 +3,7 @@ param(
   [string]$CandidateBoardPath = '',
   [string]$FlowSnapshotPath = '',
   [string]$FiscalAiNewsPath = '',
+  [string]$BasisLogPath = '',
   [string]$OutputPath = '',
   [ValidateSet('preopen', 'intraday', 'after_close')]
   [string]$Mode = 'intraday'
@@ -26,6 +27,9 @@ if (-not [string]::IsNullOrWhiteSpace($FlowSnapshotPath)) {
 }
 if (-not [string]::IsNullOrWhiteSpace($FiscalAiNewsPath)) {
   $argsList += @('--fiscal-ai-news-path', $FiscalAiNewsPath)
+}
+if (-not [string]::IsNullOrWhiteSpace($BasisLogPath)) {
+  $argsList += @('--basis-log-path', $BasisLogPath)
 }
 if (-not [string]::IsNullOrWhiteSpace($OutputPath)) {
   $argsList += @('--output-path', $OutputPath)

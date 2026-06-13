@@ -8,8 +8,10 @@ $candidatePath = Join-Path $root 'picks/cache/candidate_board.radar.test.json'
 $flowPath = Join-Path $root 'picks/cache/flow_snapshot.radar.test.json'
 $newsPath = Join-Path $root 'picks/cache/fiscal_ai_news.radar.test.json'
 $outputPath = Join-Path $root 'picks/cache/market_radar.radar.test.json'
+$basisPath = Join-Path $root 'picks/cache/futures_basis.radar.test.jsonl'
+$afterCloseOutputPath = Join-Path $root 'picks/cache/market_radar.after_close.test.json'
 
-foreach ($path in @($marketPath, $candidatePath, $flowPath, $newsPath, $outputPath)) {
+foreach ($path in @($marketPath, $candidatePath, $flowPath, $newsPath, $outputPath, $basisPath, $afterCloseOutputPath)) {
   Remove-Item -Path $path -ErrorAction SilentlyContinue
 }
 
@@ -88,6 +90,11 @@ $news = @{
   )
 }
 $news | ConvertTo-Json -Depth 8 | Set-Content -Path $newsPath -Encoding UTF8
+@(
+  '{"timestamp":"2026-06-05 15:00:00","basis":-1.1}',
+  '{"timestamp":"2026-06-05 15:01:00","basis":-2.2}',
+  '{"timestamp":"2026-06-05 15:02:00","basis":-2.6}'
+) | Set-Content -Path $basisPath -Encoding UTF8
 
 if (-not (Test-Path $runner)) {
   throw "Missing market radar runner: $runner"
@@ -133,6 +140,19 @@ if (@($radar.obsi.evidence_map | Where-Object { $_.evidence_type -eq 'artifact' 
 }
 if (@($radar.obsi.evidence_map | Where-Object { $_.evidence_type -eq 'research_fact' }).Count -lt 1) {
   throw 'Market radar should include Obsidian research_fact evidence mapping'
+}
+
+$afterCloseRun = & $runner -MarketSnapshotPath $marketPath -CandidateBoardPath $candidatePath -FlowSnapshotPath $flowPath -FiscalAiNewsPath $newsPath -BasisLogPath $basisPath -OutputPath $afterCloseOutputPath -Mode after_close 2>&1
+$afterCloseExitCode = if ($null -eq $LASTEXITCODE) { 0 } else { $LASTEXITCODE }
+if ($afterCloseExitCode -ne 0) {
+  throw "Market radar after-close failed with exit code $afterCloseExitCode`n$($afterCloseRun -join "`n")"
+}
+$afterCloseRadar = Get-Content -Path $afterCloseOutputPath -Raw -Encoding UTF8 | ConvertFrom-Json
+if ($afterCloseRadar.market_context.futures.analysis.tick_count -ne 3) {
+  throw 'Market radar after-close should read JSONL basis ticks'
+}
+if ($afterCloseRadar.market_context.futures.analysis.risk_level -ne 'HIGH') {
+  throw 'Market radar after-close should preserve basis risk assessment'
 }
 
 Write-Output 'market radar tests passed'

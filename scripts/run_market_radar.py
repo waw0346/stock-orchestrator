@@ -8,13 +8,12 @@ Outputs:
 """
 
 import argparse
-import json
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
-from lib.io import read_json, write_json
+from lib.io import read_json, read_json_lines, write_json, write_json_lines
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -299,14 +298,9 @@ def analyze_daily_basis(log_path: Path) -> Dict[str, Any]:
     if log_path.exists():
         try:
             if log_path.suffix == ".jsonl":
-                with open(log_path, "r", encoding="utf-8") as f:
-                    for line in f:
-                        line = line.strip()
-                        if not line:
-                            continue
-                        ticks.append(json.loads(line))
+                ticks = read_json_lines(log_path)
             else:
-                log_data = json.loads(log_path.read_text(encoding="utf-8"))
+                log_data = read_json(log_path, default={})
                 ticks = log_data.get("ticks", [])
         except Exception as e:
             print(f"WARN: Failed to read basis log at {log_path.name}: {e}", file=sys.stderr)
@@ -317,7 +311,7 @@ def analyze_daily_basis(log_path: Path) -> Dict[str, Any]:
         status_path = log_path.parent / "futures_monitor_status.json"
         if status_path.exists():
             try:
-                status_data = json.loads(status_path.read_text(encoding="utf-8"))
+                status_data = read_json(status_path, default={})
                 return {
                     "status": "success",
                     "tick_count": status_data.get("health", {}).get("daemon_uptime_ticks", 1),
@@ -357,13 +351,9 @@ def analyze_daily_basis(log_path: Path) -> Dict[str, Any]:
         try:
             # Save the generated mock log
             if log_path.suffix == ".jsonl":
-                log_path.parent.mkdir(parents=True, exist_ok=True)
-                with open(log_path, "w", encoding="utf-8") as f:
-                    for t in ticks:
-                        f.write(json.dumps(t) + "\n")
+                write_json_lines(log_path, ticks)
             else:
-                log_path.parent.mkdir(parents=True, exist_ok=True)
-                log_path.write_text(json.dumps(log_data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+                write_json(log_path, log_data)
         except Exception:
             pass
 

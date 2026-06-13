@@ -92,6 +92,7 @@ $criticalPatterns = @(
   '^scripts/(bootstrap|check_runtime_contract|summarize_context)\.(py|ps1)$',
   '^scripts/lib/.*\.py$',
   '^scripts/generate_vwap_anchors\.py$',
+  '^scripts/run_market_radar\.(py|ps1)$',
   '^scripts/(validate_project|review_changes)\.ps1$',
   '^tests/.*\.ps1$',
   '^tests/run_cross_platform_smoke\.py$',
