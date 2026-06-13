@@ -91,6 +91,7 @@ $criticalPatterns = @(
   '^docs/(ai_runtime_adapter|context_summary|scripts_lib_refactor_candidates)\.md$',
   '^scripts/(bootstrap|check_runtime_contract|summarize_context)\.(py|ps1)$',
   '^scripts/lib/.*\.py$',
+  '^scripts/generate_vwap_anchors\.py$',
   '^scripts/(validate_project|review_changes)\.ps1$',
   '^tests/.*\.ps1$',
   '^tests/run_cross_platform_smoke\.py$',
@@ -102,6 +103,7 @@ $archivedDocPatterns = @(
 )
 $operatingDataPatterns = @(
   '^picks/20.*\.md$',
+  '^picks/analysis/20.*\.md$',
   '^picks/INDEX\.md$',
   '^picks/WATCHLIST\.md$',
   '^picks/dashboard\.html$',
@@ -114,6 +116,7 @@ $localNoisePatterns = @(
   '^\.claude/settings\.local\.json$',
   '^\.claude/agents/.*\.test$',
   '^picks/cache/.*\.json$',
+  '^picks/cache/.*\.jsonl$',
   '^picks/alerts/.*\.json$',
   '^.*\.test$',
   '^.*\.test\.(json|csv)$'

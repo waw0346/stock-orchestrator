@@ -40,6 +40,7 @@ $checks = @(
   @{ Name = 'kiwoom rest client tests'; Path = 'tests/run_kiwoom_rest_client_tests.ps1' },
   @{ Name = 'kiwoom foreign rank tests'; Path = 'tests/run_kiwoom_foreign_rank_tests.ps1' },
   @{ Name = 'market radar tests'; Path = 'tests/run_market_radar_tests.ps1' },
+  @{ Name = 'vwap anchors tests'; Path = 'tests/run_vwap_anchors_tests.ps1' },
   @{ Name = 'paper trading tests'; Path = 'tests/run_paper_trading_tests.ps1' }
 )
 

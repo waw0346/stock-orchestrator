@@ -1249,6 +1249,28 @@ foreach ($relative in $capitalAgents) {
 }
 
 Write-Output ''
+Write-Output '== DECA VWAP anchors =='
+$vwapGenerator = Join-Path $root 'scripts/generate_vwap_anchors.py'
+$vwapTests = Join-Path $root 'tests/run_vwap_anchors_tests.ps1'
+foreach ($required in @($vwapGenerator, $vwapTests)) {
+  if (Test-Path $required) {
+    Write-Output ("OK   {0}" -f (Resolve-Path -Path $required -Relative))
+  } else {
+    Add-Issue -Level 'ERROR' -Area 'DECA VWAP anchors' -Message ("Missing VWAP anchor file: {0}" -f $required)
+    Write-Output ("FAIL {0} - missing" -f $required)
+  }
+}
+if (Test-Path $vwapGenerator) {
+  $vwapText = Get-Content -Path $vwapGenerator -Raw -Encoding UTF8
+  foreach ($requiredText in @('--include-live-naver', '--base-date', 'live_lookup_enabled')) {
+    if ($vwapText -notmatch [regex]::Escape($requiredText)) {
+      Add-Issue -Level 'ERROR' -Area 'DECA VWAP anchors' -Message ("VWAP generator missing portable option: {0}" -f $requiredText)
+      Write-Output ("FAIL vwap generator - missing {0}" -f $requiredText)
+    }
+  }
+}
+
+Write-Output ''
 Write-Output '== AI runtime portability =='
 $runtimeFiles = @(
   'AGENTS.md',
